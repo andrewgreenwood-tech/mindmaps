@@ -1,5 +1,6 @@
 /* =========================================================
-   MIND MAP GENERATOR
+   BEAUTIFUL MIND MAP GENERATOR
+   Version 2 — Expand / Collapse
 ========================================================= */
 
 
@@ -33,10 +34,8 @@ const svg =
    STATE
 --------------------------------------------------------- */
 
-let root;
-
-let zoomBehaviour;
-
+let root = null;
+let zoomBehaviour = null;
 let currentImage = null;
 
 
@@ -49,10 +48,10 @@ imageInput.addEventListener("change", function () {
     const file = this.files[0];
 
     if (!file) {
+
         currentImage = null;
 
         imagePreview.style.display = "none";
-
         imagePreview.innerHTML = "";
 
         return;
@@ -72,7 +71,6 @@ imageInput.addEventListener("change", function () {
     };
 
     reader.readAsDataURL(file);
-
 });
 
 
@@ -104,9 +102,9 @@ function parseMarkdown(markdown) {
         }
 
 
-        /*
-         * Heading
-         */
+        /* ---------------------------------------------
+           Heading
+        --------------------------------------------- */
 
         const headingMatch =
             line.match(/^(#{1,6})\s+(.+)$/);
@@ -122,20 +120,28 @@ function parseMarkdown(markdown) {
 
 
             const node = {
+
                 title,
+
                 level,
+
                 type: "heading",
-                children: []
+
+                children: [],
+
+                collapsed: false
+
             };
 
 
-            /*
-             * Root
-             */
+            /* -----------------------------------------
+               Root
+            ----------------------------------------- */
 
             if (level === 1 || !root) {
 
                 if (!root) {
+
                     root = node;
                 }
 
@@ -147,14 +153,15 @@ function parseMarkdown(markdown) {
             }
 
 
-            /*
-             * Find parent
-             */
+            /* -----------------------------------------
+               Find correct parent
+            ----------------------------------------- */
 
             while (
                 stack.length > 0 &&
                 stack[stack.length - 1].level >= level
             ) {
+
                 stack.pop();
             }
 
@@ -175,9 +182,9 @@ function parseMarkdown(markdown) {
         }
 
 
-        /*
-         * Bullet
-         */
+        /* ---------------------------------------------
+           Bullet
+        --------------------------------------------- */
 
         const bulletMatch =
             line.match(/^\s*[-*+]\s+(.+)$/);
@@ -190,16 +197,19 @@ function parseMarkdown(markdown) {
 
 
             const node = {
+
                 title,
+
                 level: null,
+
                 type: "detail",
-                children: []
+
+                children: [],
+
+                collapsed: false
+
             };
 
-
-            /*
-             * Attach to deepest heading.
-             */
 
             const parent =
                 stack[stack.length - 1];
@@ -218,7 +228,93 @@ function parseMarkdown(markdown) {
 
 
 /* =========================================================
-   RENDER MAP
+   GET VISIBLE NODES
+========================================================= */
+
+function getVisibleNodes(rootNode) {
+
+    const visible = [];
+
+
+    function visit(node) {
+
+        visible.push(node);
+
+
+        if (node.collapsed) {
+
+            return;
+        }
+
+
+        if (node.children) {
+
+            node.children.forEach(child => {
+
+                visit(child);
+
+            });
+        }
+    }
+
+
+    visit(rootNode);
+
+
+    return visible;
+}
+
+
+/* =========================================================
+   BRANCH COLORS
+========================================================= */
+
+function branchColor(node) {
+
+    const colors = [
+
+        "#3977c9",
+        "#4f9a5a",
+        "#d99427",
+        "#8757a8",
+        "#c45b5b",
+        "#328f8f"
+
+    ];
+
+
+    let branch = node;
+
+
+    while (
+        branch.parent &&
+        branch.parent.depth > 0
+    ) {
+
+        branch = branch.parent;
+    }
+
+
+    if (
+        branch.parent &&
+        branch.parent.children
+    ) {
+
+        const index =
+            branch.parent.children.indexOf(branch);
+
+        return colors[
+            index % colors.length
+        ];
+    }
+
+
+    return colors[0];
+}
+
+
+/* =========================================================
+   RENDER MIND MAP
 ========================================================= */
 
 function renderMindMap(tree) {
@@ -238,21 +334,24 @@ function renderMindMap(tree) {
         svg.node().clientHeight;
 
 
-    /*
-     * Main SVG group
-     */
+    /* ---------------------------------------------
+       SVG container
+    --------------------------------------------- */
 
     const container =
-        svg.append("g");
+        svg.append("g")
+            .attr("class", "map-container");
 
 
-    /*
-     * Zoom
-     */
+    /* ---------------------------------------------
+       Zoom
+    --------------------------------------------- */
 
     zoomBehaviour =
         d3.zoom()
+
             .scaleExtent([0.25, 3])
+
             .on("zoom", event => {
 
                 container.attr(
@@ -266,33 +365,29 @@ function renderMindMap(tree) {
     svg.call(zoomBehaviour);
 
 
-    /*
-     * D3 hierarchy
-     */
+    /* ---------------------------------------------
+       D3 hierarchy
+    --------------------------------------------- */
 
     root =
         d3.hierarchy(tree);
 
 
-    /*
-     * Layout
-     *
-     * This is intentionally simple for V1.
-     * We'll replace this with our custom mind-map
-     * layout as the project develops.
-     */
+    /* ---------------------------------------------
+       Tree layout
+    --------------------------------------------- */
 
     const layout =
         d3.tree()
-            .nodeSize([70, 220]);
+            .nodeSize([75, 230]);
 
 
     layout(root);
 
 
-    /*
-     * Centre vertically
-     */
+    /* ---------------------------------------------
+       Position
+    --------------------------------------------- */
 
     const xOffset =
         width / 2;
@@ -301,9 +396,9 @@ function renderMindMap(tree) {
         height / 2;
 
 
-    /*
-     * Links
-     */
+    /* =================================================
+       LINKS
+    ================================================= */
 
     const linkGroup =
         container
@@ -311,37 +406,54 @@ function renderMindMap(tree) {
             .attr("class", "links");
 
 
-    linkGroup
-        .selectAll("path")
-        .data(root.links())
-        .join("path")
-        .attr("fill", "none")
-        .attr("stroke", "#b8b8b8")
-        .attr("stroke-width", d => {
+    const links =
+        linkGroup
+            .selectAll("path")
+            .data(root.links())
+            .join("path")
+            .attr("fill", "none")
+            .attr(
+                "stroke",
+                d => {
 
-            if (d.target.depth === 1) {
-                return 4;
-            }
+                    if (d.target.depth === 1) {
 
-            if (d.target.depth === 2) {
-                return 2.5;
-            }
+                        return branchColor(d.target);
+                    }
 
-            return 1.5;
+                    return "#b8b8b8";
+                }
+            )
+            .attr(
+                "stroke-width",
+                d => {
 
-        })
-        .attr("stroke-linecap", "round")
-        .attr(
-            "d",
-            d3.linkHorizontal()
-                .x(d => d.y + xOffset)
-                .y(d => d.x + yOffset)
-        );
+                    if (d.target.depth === 1) {
+                        return 4;
+                    }
+
+                    if (d.target.depth === 2) {
+                        return 2.5;
+                    }
+
+                    return 1.5;
+                }
+            )
+            .attr(
+                "stroke-linecap",
+                "round"
+            )
+            .attr(
+                "d",
+                d3.linkHorizontal()
+                    .x(d => d.y + xOffset)
+                    .y(d => d.x + yOffset)
+            );
 
 
-    /*
-     * Nodes
-     */
+    /* =================================================
+       NODES
+    ================================================= */
 
     const nodeGroup =
         container
@@ -355,6 +467,10 @@ function renderMindMap(tree) {
             .data(root.descendants())
             .join("g")
             .attr(
+                "class",
+                "mind-node"
+            )
+            .attr(
                 "transform",
                 d =>
                     `translate(
@@ -364,144 +480,289 @@ function renderMindMap(tree) {
             );
 
 
-    /*
-     * Node dots
-     */
+    /* ---------------------------------------------
+       Node circle
+    --------------------------------------------- */
 
     nodes
         .append("circle")
-        .attr("r", d => {
+        .attr(
+            "r",
+            d => {
 
-            if (d.depth === 0) {
-                return 10;
+                if (d.depth === 0) {
+                    return 11;
+                }
+
+                if (d.depth === 1) {
+                    return 8;
+                }
+
+                return 5;
             }
+        )
+        .attr(
+            "fill",
+            d => {
 
-            if (d.depth === 1) {
-                return 7;
+                if (d.depth === 0) {
+                    return "#20242a";
+                }
+
+                if (d.depth === 1) {
+                    return branchColor(d);
+                }
+
+                return "#777";
             }
-
-            return 4;
-
-        })
-        .attr("fill", d => {
-
-            if (d.depth === 0) {
-                return "#20242a";
-            }
-
-            if (d.depth === 1) {
-                return branchColor(d);
-            }
-
-            return "#777";
-        })
-        .attr("stroke", "white")
-        .attr("stroke-width", 2);
+        )
+        .attr(
+            "stroke",
+            "white"
+        )
+        .attr(
+            "stroke-width",
+            2
+        );
 
 
-    /*
-     * Text
-     */
+    /* =================================================
+       EXPAND / COLLAPSE BUTTON
+    ================================================= */
+
+    const expandable =
+        nodes.filter(
+            d =>
+                d.children &&
+                d.children.length > 0
+        );
+
+
+    expandable
+        .append("circle")
+        .attr(
+            "class",
+            "expand-button"
+        )
+        .attr(
+            "cx",
+            0
+        )
+        .attr(
+            "cy",
+            0
+        )
+        .attr(
+            "r",
+            13
+        )
+        .attr(
+            "fill",
+            "white"
+        )
+        .attr(
+            "stroke",
+            d => branchColor(d)
+        )
+        .attr(
+            "stroke-width",
+            2
+        );
+
+
+    expandable
+        .append("text")
+        .attr(
+            "class",
+            "expand-symbol"
+        )
+        .attr(
+            "x",
+            0
+        )
+        .attr(
+            "y",
+            1
+        )
+        .attr(
+            "text-anchor",
+            "middle"
+        )
+        .attr(
+            "dominant-baseline",
+            "middle"
+        )
+        .attr(
+            "font-size",
+            "13px"
+        )
+        .attr(
+            "font-weight",
+            "700"
+        )
+        .attr(
+            "fill",
+            d => branchColor(d)
+        )
+        .text(
+            d =>
+                d.data.collapsed
+                    ? "+"
+                    : "−"
+        );
+
+
+    /* =================================================
+       NODE TEXT
+    ================================================= */
 
     nodes
         .append("text")
-        .attr("class", d => {
+        .attr(
+            "class",
+            d => {
 
-            if (d.depth === 0) {
+                if (d.depth === 0) {
+                    return "node-title";
+                }
+
+                if (
+                    d.data.type === "detail"
+                ) {
+                    return "node-detail";
+                }
+
                 return "node-title";
             }
+        )
+        .attr(
+            "x",
+            d => {
 
-            if (d.data.type === "detail") {
-                return "node-detail";
+                if (
+                    d.children &&
+                    d.children.length > 0
+                ) {
+
+                    return 24;
+                }
+
+                return 17;
             }
+        )
+        .attr(
+            "dy",
+            "0.35em"
+        )
+        .attr(
+            "font-size",
+            d => {
 
-            return "node-title";
-        })
-        .attr("x", 17)
-        .attr("dy", "0.35em")
-        .attr("font-size", d => {
+                if (d.depth === 0) {
+                    return "24px";
+                }
 
-            if (d.depth === 0) {
-                return "24px";
+                if (d.depth === 1) {
+                    return "17px";
+                }
+
+                if (d.depth === 2) {
+                    return "14px";
+                }
+
+                return "12px";
             }
-
-            if (d.depth === 1) {
-                return "17px";
-            }
-
-            if (d.depth === 2) {
-                return "14px";
-            }
-
-            return "12px";
-        })
-        .text(d => d.data.title);
+        )
+        .text(
+            d =>
+                d.data.title
+        );
 
 
-    /*
-     * Root image
-     */
+    /* =================================================
+       ROOT IMAGE
+    ================================================= */
 
     if (currentImage) {
 
         const rootNode =
-            nodes.filter(d => d.depth === 0);
+            nodes.filter(
+                d =>
+                    d.depth === 0
+            );
 
 
         rootNode
             .append("image")
-            .attr("href", currentImage)
-            .attr("x", -75)
-            .attr("y", -105)
-            .attr("width", 150)
-            .attr("height", 75)
-            .attr("preserveAspectRatio", "xMidYMid slice")
-            .attr("clip-path", "inset(0 round 12px)");
-
+            .attr(
+                "href",
+                currentImage
+            )
+            .attr(
+                "x",
+                -75
+            )
+            .attr(
+                "y",
+                -105
+            )
+            .attr(
+                "width",
+                150
+            )
+            .attr(
+                "height",
+                75
+            )
+            .attr(
+                "preserveAspectRatio",
+                "xMidYMid slice"
+            );
     }
 
 
-    /*
-     * Fit map
-     */
+    /* =================================================
+       CLICK HANDLER
+    ================================================= */
 
-    setTimeout(() => {
+    expandable.on(
+        "click",
+        function(event, d) {
 
-        fitMap();
-
-    }, 100);
-}
-
-
-/* =========================================================
-   BRANCH COLORS
-========================================================= */
-
-function branchColor(node) {
-
-    const colors = [
-        "#3977c9",
-        "#4f9a5a",
-        "#d99427",
-        "#8757a8",
-        "#c45b5b",
-        "#328f8f"
-    ];
+            event.stopPropagation();
 
 
-    const index =
-        node.ancestors().length > 1
-            ? node.ancestors()[1].parent
-                ? node.ancestors()[1].parent.children.indexOf(
-                    node.ancestors()[1]
-                )
-                : 0
-            : 0;
+            /*
+             * Toggle state
+             */
+
+            d.data.collapsed =
+                !d.data.collapsed;
 
 
-    return colors[
-        index % colors.length
-    ];
+            /*
+             * Re-render
+             */
+
+            renderMindMap(tree);
+
+
+            /*
+             * Keep current zoom where possible
+             */
+
+        }
+    );
+
+
+    /* =================================================
+       FIT
+    ================================================= */
+
+    setTimeout(
+        fitMap,
+        100
+    );
 }
 
 
@@ -516,8 +777,19 @@ function fitMap() {
     }
 
 
+    const container =
+        d3.select(
+            "#mindMap .map-container"
+        );
+
+
+    if (!container.node()) {
+        return;
+    }
+
+
     const bounds =
-        d3.select("#mindMap g")
+        container
             .node()
             .getBBox();
 
@@ -531,31 +803,46 @@ function fitMap() {
 
     const scale =
         Math.min(
-            width / (bounds.width + 180),
-            height / (bounds.height + 180),
+
+            width /
+            (bounds.width + 180),
+
+            height /
+            (bounds.height + 180),
+
             1
+
         );
 
 
     const x =
         width / 2 -
         scale *
-        (bounds.x + bounds.width / 2);
+        (
+            bounds.x +
+            bounds.width / 2
+        );
 
 
     const y =
         height / 2 -
         scale *
-        (bounds.y + bounds.height / 2);
+        (
+            bounds.y +
+            bounds.height / 2
+        );
 
 
     svg.transition()
         .duration(500)
         .call(
+
             zoomBehaviour.transform,
+
             d3.zoomIdentity
                 .translate(x, y)
                 .scale(scale)
+
         );
 }
 
@@ -565,34 +852,49 @@ function fitMap() {
 ========================================================= */
 
 document
-    .getElementById("zoomInButton")
-    .addEventListener("click", () => {
+    .getElementById(
+        "zoomInButton"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-        svg.transition()
-            .call(
-                zoomBehaviour.scaleBy,
-                1.25
-            );
+            svg.transition()
+                .call(
+                    zoomBehaviour.scaleBy,
+                    1.25
+                );
 
-    });
-
-
-document
-    .getElementById("zoomOutButton")
-    .addEventListener("click", () => {
-
-        svg.transition()
-            .call(
-                zoomBehaviour.scaleBy,
-                0.8
-            );
-
-    });
+        }
+    );
 
 
 document
-    .getElementById("fitButton")
-    .addEventListener("click", fitMap);
+    .getElementById(
+        "zoomOutButton"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+            svg.transition()
+                .call(
+                    zoomBehaviour.scaleBy,
+                    0.8
+                );
+
+        }
+    );
+
+
+document
+    .getElementById(
+        "fitButton"
+    )
+    .addEventListener(
+        "click",
+        fitMap
+    );
 
 
 /* =========================================================
@@ -631,9 +933,13 @@ generateButton.addEventListener(
         }
 
 
-        inputPanel.classList.add("hidden");
+        inputPanel.classList.add(
+            "hidden"
+        );
 
-        mapPanel.classList.remove("hidden");
+        mapPanel.classList.remove(
+            "hidden"
+        );
 
 
         renderMindMap(tree);
