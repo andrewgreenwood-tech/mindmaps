@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mind Map Generator</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- D3 -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+
+<body>
+
+    <header class="topbar">
+
+        <div class="brand">
+            <div class="brand-mark">✦</div>
+
+            <div>
+                <div class="brand-title">Mind Map Generator</div>
+                <div class="brand-subtitle">
+                    Markdown → Interactive Mind Map
+                </div>
+            </div>
+        </div>
+
+        <div class="top-actions">
+            <button id="fitButton">Fit Map</button>
+            <button id="zoomOutButton">−</button>
+            <button id="zoomInButton">+</button>
+        </div>
+
+    </header>
+
+
+    <main>
+
+        <!-- INPUT PANEL -->
+
+        <section id="inputPanel" class="input-panel">
+
+            <div class="panel-header">
+                <div>
+                    <h1>Create a Mind Map</h1>
+                    <p>
+                        Paste your Markdown mind map below.
+                    </p>
+                </div>
+            </div>
+
+
+            <label for="markdownInput">
+                Markdown
+            </label>
+
+            <textarea
+                id="markdownInput"
+                spellcheck="false"
+            ># Settling the American West
+
+## Mining and Mineral Discoveries
+
+### The Comstock Lode
+- Discovered by Henry Comstock in 1859
+- Located near Virginia City, Nevada
+- Rich blue-gray clay containing pure silver
+
+### Colorado Strikes
+- Pikes Peak gold discovery in 1858
+- Leadville silver and lead strike in the 1870s
+
+## Ranching and Cattle Industry
+
+### The Rise of Cattle Ranching
+- Texas longhorns adapted to the Great Plains
+- Thrived on tough grasses and scarce water
+
+### The Long Drive
+- Post-Civil War price increases
+- Railroads reached Kansas and Missouri
+- First long drive to Sedalia, Missouri in 1866
+
+## Settling the Great Plains
+
+### Environmental Challenges
+- Summer temperatures exceeding 100 degrees Fahrenheit
+- Frequent prairie fires
+- Severe winter blizzards
+
+## Struggles of the Plains Indians
+
+### Traditional Way of Life
+- Nomadic tribes followed the buffalo
+- Lived in extended family bands
+
+### Battle of the Little Bighorn
+- Gold miners overran Lakota reservation in 1876
+- George A. Custer led the Seventh Cavalry
+</textarea>
+
+
+            <!-- OPTIONAL IMAGE -->
+
+            <div class="image-section">
+
+                <div class="image-section-title">
+                    Optional Main Image
+                </div>
+
+                <p>
+                    Add an image if you want one in the centre of the map.
+                </p>
+
+                <input
+                    id="imageInput"
+                    type="file"
+                    accept="image/*"
+                >
+
+                <div id="imagePreview" class="image-preview"></div>
+
+            </div>
+
+
+            <button
+                id="generateButton"
+                class="generate-button"
+            >
+                Generate Mind Map
+            </button>
+
+        </section>
+
+
+        <!-- MAP -->
+
+        <section id="mapPanel" class="map-panel hidden">
+
+            <svg id="mindMap"></svg>
+
+            <div class="map-help">
+                Drag to move · Scroll to zoom · Click branches to expand
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>
