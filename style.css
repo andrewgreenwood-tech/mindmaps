@@ -398,3 +398,7 @@ textarea:focus {
         display: none;
     }
 }
+
+.hidden {
+    display: none !important;
+}
