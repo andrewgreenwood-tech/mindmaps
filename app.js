@@ -275,6 +275,8 @@ function branchColor(node) {
 ========================================================= */
 
 function renderMindMap(tree, fitAfterRender = false) {
+   const previousTransform =
+        d3.zoomTransform(svg.node());
 
     svg.selectAll("*").remove();
 
@@ -326,6 +328,13 @@ function renderMindMap(tree, fitAfterRender = false) {
 
 
     svg.call(zoomBehaviour);
+
+   if (!fitAfterRender) {
+       svg.call(
+           zoomBehaviour.transform,
+           previousTransform
+       );
+   }
 
 
     /* =================================================
