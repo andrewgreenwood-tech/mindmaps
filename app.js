@@ -518,142 +518,460 @@ function setupZoom() {
    LAYOUT
    ========================================================= */
 
+/*
+   HORIZONTAL MIND-MAP LAYOUT
+
+   The map is organised deliberately as:
+
+       ROOT
+         |
+         +---- PRIMARY
+                 |
+                 +---- SECONDARY
+                         |
+                         +---- DETAIL
+
+   The important difference from a normal D3 tree is that
+   each primary branch gets its own vertical "zone".
+
+   This prevents one large branch from pushing the other
+   primary branches around too much.
+
+   X = vertical position
+   Y = horizontal position
+*/
+
 function createLayout() {
 
+    if (!hierarchyRoot) {
+        return;
+    }
+
+
+    /* -----------------------------------------------------
+       BASIC SETTINGS
+    ----------------------------------------------------- */
+
+    const PRIMARY_GAP = 190;
+
+    const SECONDARY_GAP = 115;
+
+    const DETAIL_GAP = 72;
+
+    const PRIMARY_TO_SECONDARY = 360;
+
+    const SECONDARY_TO_DETAIL = 300;
+
+
+    /* -----------------------------------------------------
+       GET VISIBLE PRIMARY BRANCHES
+    ----------------------------------------------------- */
+
+    const primaryBranches =
+        hierarchyRoot.children || [];
+
+
     /*
-       D3 tree:
-
-       X = vertical position
-       Y = horizontal position
-
-       We deliberately normalise the tree so
-       the root is ALWAYS at x = 0.
-
-       This is the key to preventing the map
-       from jumping when branches collapse.
+       The root always stays at exactly x = 0.
+       This is important because collapsing a branch
+       must NOT move the root vertically.
     */
 
+    hierarchyRoot.x = 0;
+    hierarchyRoot.y = 0;
 
-    const layout =
-        d3.tree()
 
-            .nodeSize([
-                115,
-                340
-            ])
+    /* -----------------------------------------------------
+       CREATE A VERTICAL ZONE FOR EACH PRIMARY
+    ----------------------------------------------------- */
 
-            .separation(
-                function (a, b) {
+    const zones = [];
 
-                    /*
-                       Nodes sharing a parent
-                       get generous spacing.
-                    */
 
-                    if (
-                        a.parent === b.parent
-                    ) {
+    primaryBranches.forEach(
+        function (primary) {
+
+            let height = 1;
+
+            /*
+               Work out how much vertical space this
+               branch actually needs.
+            */
+
+            if (
+                primary.children &&
+                primary.children.length
+            ) {
+
+                primary.children.forEach(
+                    function (secondary) {
+
+                        let secondaryHeight = 1;
 
                         if (
-                            a.depth === 1
+                            secondary.children &&
+                            secondary.children.length
                         ) {
 
-                            return 1.45;
+                            secondaryHeight =
+                                Math.max(
+                                    1,
+                                    secondary.children.length
+                                );
                         }
 
-                        if (
-                            a.depth === 2
-                        ) {
-
-                            return 1.25;
-                        }
-
-                        return 1.1;
+                        height +=
+                            Math.max(
+                                1,
+                                secondaryHeight
+                            );
                     }
+                );
+            }
 
 
-                    return 1.6;
+            zones.push({
+                node: primary,
+                height: Math.max(
+                    1,
+                    height
+                )
+            });
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       CALCULATE TOTAL HEIGHT
+    ----------------------------------------------------- */
+
+    let totalHeight = 0;
+
+    zones.forEach(
+        function (zone) {
+
+            totalHeight +=
+                zone.height *
+                PRIMARY_GAP;
+
+        }
+    );
+
+
+    /*
+       Give a sensible minimum amount of space between
+       primary branches.
+    */
+
+    totalHeight =
+        Math.max(
+            totalHeight,
+            Math.max(
+                1,
+                primaryBranches.length
+            ) *
+            PRIMARY_GAP
+        );
+
+
+    /* -----------------------------------------------------
+       PLACE PRIMARY BRANCHES
+    ----------------------------------------------------- */
+
+    let currentY =
+        -(totalHeight / 2);
+
+
+    zones.forEach(
+        function (zone) {
+
+            const primary =
+                zone.node;
+
+            const zoneHeight =
+                zone.height *
+                PRIMARY_GAP;
+
+
+            primary.x =
+                currentY +
+                zoneHeight / 2;
+
+
+            primary.y =
+                PRIMARY_TO_SECONDARY;
+
+
+            currentY +=
+                zoneHeight;
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       PLACE SECONDARY BRANCHES
+    ----------------------------------------------------- */
+
+    primaryBranches.forEach(
+        function (primary) {
+
+            const children =
+                primary.children || [];
+
+
+            if (!children.length) {
+                return;
+            }
+
+
+            /*
+               Calculate the total height occupied
+               by this primary's secondary branches.
+            */
+
+            let branchHeight = 0;
+
+
+            children.forEach(
+                function (secondary) {
+
+                    const detailCount =
+                        (
+                            secondary.children || []
+                        ).length;
+
+
+                    const detailHeight =
+                        Math.max(
+                            1,
+                            detailCount
+                        ) *
+                        DETAIL_GAP;
+
+
+                    branchHeight +=
+                        Math.max(
+                            SECONDARY_GAP,
+                            detailHeight
+                        );
+
                 }
             );
 
 
-    layout(
-        hierarchyRoot
-    );
+            /*
+               Centre the secondary group around
+               the primary branch.
+            */
+
+            let y =
+                primary.x -
+                branchHeight / 2;
 
 
-    /* -------------------------------------------------
-       FIX ROOT VERTICAL POSITION
-    ------------------------------------------------- */
+            children.forEach(
+                function (secondary) {
 
-    const rootX =
-        hierarchyRoot.x;
+                    const detailCount =
+                        (
+                            secondary.children || []
+                        ).length;
 
 
-    hierarchyRoot.each(
-        function (d) {
+                    const localHeight =
+                        Math.max(
+                            SECONDARY_GAP,
+                            Math.max(
+                                1,
+                                detailCount
+                            ) *
+                            DETAIL_GAP
+                        );
 
-            d.x -= rootX;
+
+                    secondary.x =
+                        y +
+                        localHeight / 2;
+
+
+                    secondary.y =
+                        SECONDARY_TO_DETAIL;
+
+
+                    y +=
+                        localHeight;
+
+                }
+            );
+
         }
     );
 
 
-    /* -------------------------------------------------
-       EXTRA PRIMARY BRANCH SPACING
-    ------------------------------------------------- */
+    /* -----------------------------------------------------
+       PLACE DETAIL NODES
+    ----------------------------------------------------- */
 
-    if (
-        hierarchyRoot.children &&
-        hierarchyRoot.children.length > 1
+    primaryBranches.forEach(
+        function (primary) {
+
+            const secondaryBranches =
+                primary.children || [];
+
+
+            secondaryBranches.forEach(
+                function (secondary) {
+
+                    const details =
+                        secondary.children || [];
+
+
+                    if (!details.length) {
+                        return;
+                    }
+
+
+                    /*
+                       Details are centred around
+                       their secondary node.
+                    */
+
+                    const totalDetailHeight =
+                        (
+                            details.length - 1
+                        ) *
+                        DETAIL_GAP;
+
+
+                    let detailY =
+                        secondary.x -
+                        totalDetailHeight / 2;
+
+
+                    details.forEach(
+                        function (detail) {
+
+                            detail.x =
+                                detailY;
+
+                            detail.y =
+                                SECONDARY_TO_DETAIL +
+                                300;
+
+
+                            detailY +=
+                                DETAIL_GAP;
+
+                        }
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       HANDLE DEEPER LEVELS
+    ----------------------------------------------------- */
+
+    hierarchyRoot.each(
+        function (node) {
+
+            /*
+               Any levels deeper than the normal
+               detail level continue horizontally.
+            */
+
+            if (node.depth >= 4) {
+
+                node.y =
+                    SECONDARY_TO_DETAIL +
+                    (
+                        node.depth - 2
+                    ) *
+                    300;
+
+            }
+
+        }
+    );
+
+
+    /* -----------------------------------------------------
+       KEEP ROOT AT THE CENTRE OF THE PRIMARY GROUP
+    ----------------------------------------------------- */
+
+    /*
+       We deliberately DO NOT recalculate root.x
+       from its children.
+
+       This is what keeps the root stable when
+       branches are collapsed or expanded.
+    */
+
+    hierarchyRoot.x = 0;
+    hierarchyRoot.y = 0;
+
+
+    /* -----------------------------------------------------
+       SAFETY PASS
+    ----------------------------------------------------- */
+
+    /*
+       Prevent neighbouring primary nodes from becoming
+       too close together.
+    */
+
+    for (
+        let i = 1;
+        i < primaryBranches.length;
+        i++
     ) {
 
-        const children =
-            hierarchyRoot.children;
+        const previous =
+            primaryBranches[i - 1];
+
+        const current =
+            primaryBranches[i];
 
 
         const minimumGap =
-            145;
+            PRIMARY_GAP;
 
 
-        for (
-            let i = 1;
-            i < children.length;
-            i++
+        const actualGap =
+            current.x -
+            previous.x;
+
+
+        if (
+            actualGap <
+            minimumGap
         ) {
 
-            const previous =
-                children[i - 1];
-
-            const current =
-                children[i];
+            const adjustment =
+                minimumGap -
+                actualGap;
 
 
-            const gap =
-                current.x -
-                previous.x;
+            current.each(
+                function (node) {
 
+                    node.x +=
+                        adjustment;
 
-            if (
-                gap < minimumGap
-            ) {
+                }
+            );
 
-                const adjustment =
-                    minimumGap -
-                    gap;
-
-
-                current.each(
-                    function (d) {
-
-                        d.x +=
-                            adjustment;
-                    }
-                );
-            }
         }
-    }
-}
 
+    }
+
+}
 
 /* =========================================================
    LINK PATH
