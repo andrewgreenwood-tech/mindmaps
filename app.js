@@ -1879,10 +1879,6 @@ nodes
    NODE APPEARANCE
 ------------------------------------------------- */
 
-/*
-   Add an icon to the node when one has been selected.
-*/
-
 nodes.each(
     function (d) {
 
@@ -1911,54 +1907,56 @@ nodes.each(
                         : 38;
 
 
-            const image =
-                d3.select(this)
-                    .append("image")
+            const imageX =
+                -nodeWidth(d) / 2 + 12;
 
-                    .attr(
-                        "class",
-                        "node-image"
-                    )
-
-                    .attr(
-                        "href",
-                        appearance.image
-                    )
-
-                    .attr(
-                        "x",
-                        -nodeWidth(d) / 2 + 12
-                    )
-
-                    .attr(
-                        "y",
-                        -imageSize / 2
-                    )
-
-                    .attr(
-                        "width",
-                        imageSize
-                    )
-
-                    .attr(
-                        "height",
-                        imageSize
-                    )
-
-                    .attr(
-                        "preserveAspectRatio",
-                        "xMidYMid slice"
-                    );
+            const imageY =
+                -imageSize / 2;
 
 
-            /*
-               Rounded image corners.
-            */
+            d3.select(this)
 
-            image.style(
-                "clip-path",
-                "inset(0 round 10px)"
-            );
+                .append("image")
+
+                .attr(
+                    "class",
+                    "node-image"
+                )
+
+                .attr(
+                    "href",
+                    appearance.image
+                )
+
+                .attr(
+                    "x",
+                    imageX
+                )
+
+                .attr(
+                    "y",
+                    imageY
+                )
+
+                .attr(
+                    "width",
+                    imageSize
+                )
+
+                .attr(
+                    "height",
+                    imageSize
+                )
+
+                .attr(
+                    "preserveAspectRatio",
+                    "xMidYMid slice"
+                )
+
+                .style(
+                    "clip-path",
+                    "inset(0 round 10px)"
+                );
         }
 
 
@@ -2013,9 +2011,9 @@ nodes.each(
                     appearance.icon
                 );
         }
+
     }
 );
-
 
 /* -------------------------------------------------
    TEXT
