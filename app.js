@@ -488,26 +488,28 @@ function setupZoom() {
 function createLayout() {
 
     /*
-       IMPORTANT:
-
        X = vertical position
        Y = horizontal position
 
-       The root is always positioned at:
+       The root remains fixed at 0,0.
 
-           x = 0
-           y = 0
+       We deliberately give the map more horizontal
+       breathing room so that:
 
-       Therefore collapsing a branch
-       cannot move the root.
+       ROOT
+          ↓
+       PRIMARY
+             ↓
+          SECONDARY
+                   ↓
+                  DETAIL
     */
-
 
     const layout =
         d3.tree()
             .nodeSize([
-                105,
-                280
+                115,
+                360
             ]);
 
 
@@ -517,7 +519,7 @@ function createLayout() {
 
 
     /* -------------------------------------------------
-       FIX ROOT VERTICAL POSITION
+       KEEP ROOT VERTICALLY FIXED
     ------------------------------------------------- */
 
     const rootX =
@@ -528,12 +530,13 @@ function createLayout() {
         function (d) {
 
             d.x -= rootX;
+
         }
     );
 
 
     /* -------------------------------------------------
-       KEEP PRIMARY BRANCHES REASONABLY SPACED
+       SPACE PRIMARY BRANCHES
     ------------------------------------------------- */
 
     if (
@@ -546,7 +549,7 @@ function createLayout() {
 
 
         const minimumGap =
-            95;
+            125;
 
 
         for (
@@ -557,6 +560,7 @@ function createLayout() {
 
             const previous =
                 children[i - 1];
+
 
             const current =
                 children[i];
@@ -581,11 +585,16 @@ function createLayout() {
 
                         d.x +=
                             adjustment;
+
                     }
                 );
+
             }
+
         }
+
     }
+
 }
 
 
