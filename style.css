@@ -402,3 +402,61 @@ textarea:focus {
 .hidden {
     display: none !important;
 }
+/* =========================================================
+   MIND MAP VISUAL POLISH — STEP 1
+   Better spacing, typography and node appearance
+========================================================= */
+
+.mind-node {
+    cursor: pointer;
+}
+
+.mind-node text {
+    font-family: Arial, Helvetica, sans-serif;
+    pointer-events: none;
+}
+
+.mind-node .node-title {
+    font-weight: 600;
+    fill: #20242a;
+}
+
+.mind-node .node-detail {
+    font-weight: 400;
+    fill: #555;
+}
+
+.mind-node .expand-button {
+    cursor: pointer;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
+}
+
+.mind-node .expand-symbol {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Major branch labels */
+
+.mind-node text.node-title {
+    letter-spacing: 0.1px;
+}
+
+/* Smooth branch appearance */
+
+.links path {
+    transition:
+        opacity 0.25s ease,
+        stroke-width 0.25s ease;
+}
+
+/* Improve SVG rendering */
+
+#mindMap {
+    overflow: hidden;
+    user-select: none;
+}
+
+#mindMap text {
+    dominant-baseline: middle;
+}
