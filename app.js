@@ -361,11 +361,44 @@ function renderMindMap(tree, fitAfterRender = false) {
     --------------------------------------------- */
 
     const layout =
-        d3.tree()
-            .nodeSize([75, 230]);
+    d3.tree()
+        .nodeSize([110, 260]);
+
+layout(root);
 
 
-    layout(root);
+/* ---------------------------------------------
+   Keep the root node anchored
+--------------------------------------------- */
+
+const rootX = root.x;
+
+root.each(function(d) {
+    d.x = d.x - rootX;
+});
+
+
+/* ---------------------------------------------
+   Prevent a major branch from sitting directly
+   on top of the root node
+--------------------------------------------- */
+
+const minimumRootGap = 70;
+
+root.children?.forEach(function(child) {
+
+    if (Math.abs(child.x) < minimumRootGap) {
+
+        const shift =
+            child.x >= 0
+                ? minimumRootGap
+                : -minimumRootGap;
+
+        child.each(function(d) {
+            d.x += shift;
+        });
+    }
+});
 
 
    /* ---------------------------------------------
