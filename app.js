@@ -154,12 +154,18 @@ function getNodeAppearanceKey(d) {
    NODE APPEARANCE PANEL
 ========================================================= */
 
-let appearancePanel =
-    document.getElementById(
-        "nodeAppearancePanel"
-    );
+let appearancePanel = null;
 
-if (!appearancePanel) {
+
+/* =========================================================
+   CREATE APPEARANCE PANEL
+========================================================= */
+
+function createAppearancePanel() {
+
+    if (appearancePanel) {
+        return;
+    }
 
     appearancePanel =
         document.createElement("div");
@@ -204,13 +210,15 @@ if (!appearancePanel) {
 
 
 /* =========================================================
-   OPEN PANEL
+   OPEN APPEARANCE PANEL
 ========================================================= */
 
 function openAppearancePanel(
     d,
     event
 ) {
+
+    createAppearancePanel();
 
     event.stopPropagation();
 
@@ -332,6 +340,7 @@ function openAppearancePanel(
     iconSelect.style.fontSize =
         "20px";
 
+
     ICON_OPTIONS.forEach(
         function (icon) {
 
@@ -374,11 +383,6 @@ function openAppearancePanel(
             renderMindMap(
                 mapData,
                 false
-            );
-
-            openAppearancePanel(
-                d,
-                event
             );
         }
     );
@@ -458,11 +462,6 @@ function openAppearancePanel(
                     renderMindMap(
                         mapData,
                         false
-                    );
-
-                    openAppearancePanel(
-                        d,
-                        event
                     );
                 };
 
@@ -693,7 +692,7 @@ function openAppearancePanel(
 
 
 /* =========================================================
-   CLOSE PANEL
+   CLOSE APPEARANCE PANEL
 ========================================================= */
 
 function closeAppearancePanel() {
