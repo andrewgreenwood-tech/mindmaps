@@ -1,6 +1,6 @@
 /* =========================================================
    MIND MAP GENERATOR
-   Version 5 — Stable Card Layout
+   Version 6 — Structured Mind Map Layout
 ========================================================= */
 
 
@@ -113,7 +113,6 @@ function parseMarkdown(markdown) {
                 "    "
             );
 
-
         if (!line.trim()) {
             continue;
         }
@@ -128,7 +127,6 @@ function parseMarkdown(markdown) {
                 /^(#{1,6})\s+(.+)$/
             );
 
-
         if (headingMatch) {
 
             const level =
@@ -136,7 +134,6 @@ function parseMarkdown(markdown) {
 
             const title =
                 headingMatch[2].trim();
-
 
             const node = {
 
@@ -154,7 +151,6 @@ function parseMarkdown(markdown) {
 
                 collapsed:
                     false
-
             };
 
 
@@ -214,7 +210,6 @@ function parseMarkdown(markdown) {
                 );
             }
 
-
             continue;
         }
 
@@ -227,7 +222,6 @@ function parseMarkdown(markdown) {
             line.match(
                 /^\s*[-*+]\s+(.+)$/
             );
-
 
         if (bulletMatch) {
 
@@ -264,7 +258,6 @@ function parseMarkdown(markdown) {
             }
         }
     }
-
 
     return root;
 }
@@ -312,7 +305,6 @@ function branchColor(node) {
                 branch
             );
 
-
         return colors[
             index % colors.length
         ];
@@ -333,16 +325,13 @@ function nodeWidth(d) {
         return 330;
     }
 
-
     if (d.depth === 1) {
         return 280;
     }
 
-
     if (d.depth === 2) {
         return 235;
     }
-
 
     return 205;
 }
@@ -358,16 +347,13 @@ function nodeHeight(d) {
         return 115;
     }
 
-
     if (d.depth === 1) {
         return 72;
     }
 
-
     if (d.depth === 2) {
         return 58;
     }
-
 
     return 48;
 }
@@ -388,17 +374,14 @@ function wrapNodeText(
             const text =
                 d3.select(this);
 
-
             const words =
                 d.data.title
                     .split(/\s+/)
                     .reverse();
 
-
             let word;
 
             let line = [];
-
 
             const lineHeight =
                 d.depth === 0
@@ -406,7 +389,6 @@ function wrapNodeText(
                     : d.depth === 1
                         ? 19
                         : 16;
-
 
             const lines = [];
 
@@ -419,13 +401,6 @@ function wrapNodeText(
 
                 const test =
                     line.join(" ");
-
-
-                /*
-                   We cannot reliably measure text
-                   before it is attached, so use a
-                   conservative character estimate.
-                */
 
                 const estimatedWidth =
                     test.length *
@@ -503,6 +478,345 @@ function wrapNodeText(
 
 
 /* =========================================================
+   STRUCTURED LAYOUT
+========================================================= */
+
+/*
+   This is the important change in Version 6.
+
+   We still use D3 to calculate the natural tree structure,
+   but we then give each depth its own horizontal position.
+
+   Root
+       0
+
+   Primary
+       250
+
+   Secondary
+       535
+
+   Detail
+       800
+
+   This means moving a primary branch does NOT squeeze
+   its secondary branches against it.
+*/
+
+function applyStructuredLayout(root) {
+
+    if (!root) {
+        return;
+    }
+
+
+    /* =====================================================
+       HORIZONTAL DEPTH POSITIONS
+    ===================================================== */
+
+    const depthPositions = {
+
+        0: 0,
+
+        1: 250,
+
+        2: 535,
+
+        3: 800,
+
+        4: 1045,
+
+        5: 1280
+    };
+
+
+    root.each(
+        function (d) {
+
+            if (
+                depthPositions[
+                    d.depth
+                ] !== undefined
+            ) {
+
+                d.y =
+                    depthPositions[
+                        d.depth
+                    ];
+            }
+            else {
+
+                d.y =
+                    1280 +
+                    (
+                        d.depth - 5
+                    ) *
+                    235;
+            }
+        }
+    );
+
+
+    /* =====================================================
+       PRIMARY BRANCH POSITIONS
+    ===================================================== */
+
+    if (
+        !root.children ||
+        root.children.length === 0
+    ) {
+
+        return;
+    }
+
+
+    const primaryBranches =
+        root.children;
+
+
+    /*
+       We want the primary branches to sit around
+       the root rather than being stretched from
+       the top to the bottom of the map.
+    */
+
+    const primarySpacing =
+        150;
+
+
+    const primaryCentre =
+        (
+            primaryBranches.length - 1
+        ) / 2;
+
+
+    primaryBranches.forEach(
+        function (
+            branch,
+            index
+        ) {
+
+            const desiredX =
+                (
+                    index -
+                    primaryCentre
+                ) *
+                primarySpacing;
+
+
+            const shift =
+                desiredX -
+                branch.x;
+
+
+            /*
+               Move the entire branch together.
+
+               This preserves the internal structure
+               calculated by D3.
+            */
+
+            branch.each(
+                function (d) {
+
+                    d.x +=
+                        shift;
+                }
+            );
+        }
+    );
+
+
+    /* =====================================================
+       SECONDARY BRANCH BREATHING ROOM
+    ===================================================== */
+
+    primaryBranches.forEach(
+        function (branch) {
+
+            if (
+                !branch.children ||
+                branch.children.length < 2
+            ) {
+
+                return;
+            }
+
+
+            const secondaryChildren =
+                branch.children;
+
+
+            const secondarySpacing =
+                90;
+
+
+            const secondaryCentre =
+                (
+                    secondaryChildren.length - 1
+                ) / 2;
+
+
+            secondaryChildren.forEach(
+                function (
+                    child,
+                    index
+                ) {
+
+                    const desiredX =
+                        branch.x +
+                        (
+                            index -
+                            secondaryCentre
+                        ) *
+                        secondarySpacing;
+
+
+                    const shift =
+                        desiredX -
+                        child.x;
+
+
+                    child.each(
+                        function (d) {
+
+                            d.x +=
+                                shift;
+                        }
+                    );
+                }
+            );
+        }
+    );
+
+
+    /* =====================================================
+       COLLISION CHECK
+    ===================================================== */
+
+    const visibleNodes =
+        root.descendants();
+
+
+    /*
+       Sort by vertical position.
+    */
+
+    visibleNodes.sort(
+        function (a, b) {
+
+            return a.x - b.x;
+        }
+    );
+
+
+    /*
+       Prevent cards at the same depth from
+       physically overlapping.
+    */
+
+    for (
+        let i = 1;
+        i < visibleNodes.length;
+        i++
+    ) {
+
+        const previous =
+            visibleNodes[i - 1];
+
+        const current =
+            visibleNodes[i];
+
+
+        if (
+            previous.depth !==
+            current.depth
+        ) {
+
+            continue;
+        }
+
+
+        const minimumGap =
+            (
+                nodeHeight(previous) +
+                nodeHeight(current)
+            ) /
+            2 +
+            24;
+
+
+        const actualGap =
+            current.x -
+            previous.x;
+
+
+        if (
+            actualGap <
+            minimumGap
+        ) {
+
+            const adjustment =
+                minimumGap -
+                actualGap;
+
+
+            /*
+               Move this node and everything
+               below it together.
+            */
+
+            current.each(
+                function (d) {
+
+                    d.x +=
+                        adjustment;
+                }
+            );
+        }
+    }
+
+
+    /* =====================================================
+       RE-CENTRE PRIMARY GROUP
+    ===================================================== */
+
+    const firstPrimary =
+        primaryBranches[0];
+
+    const lastPrimary =
+        primaryBranches[
+            primaryBranches.length - 1
+        ];
+
+
+    const groupCentre =
+        (
+            firstPrimary.x +
+            lastPrimary.x
+        ) / 2;
+
+
+    const correction =
+        -groupCentre;
+
+
+    primaryBranches.forEach(
+        function (branch) {
+
+            branch.each(
+                function (d) {
+
+                    d.x +=
+                        correction;
+                }
+            );
+        }
+    );
+}
+
+
+/* =========================================================
    RENDER
 ========================================================= */
 
@@ -512,10 +826,10 @@ function renderMindMap(
 ) {
 
     /*
-       IMPORTANT:
+       Preserve the current camera.
 
-       Keep the current camera when expanding
-       or collapsing a branch.
+       Expanding or collapsing a branch should NOT
+       automatically zoom the user back to Fit Map.
     */
 
     const previousTransform =
@@ -524,25 +838,14 @@ function renderMindMap(
         );
 
 
-    svg.selectAll("*").remove();
+    svg.selectAll("*")
+        .remove();
 
 
     if (!tree) {
         return;
     }
 
-
-    const width =
-        svg.node().clientWidth;
-
-
-    const height =
-        svg.node().clientHeight;
-
-
-    /* =====================================================
-       CONTAINER
-    ===================================================== */
 
     const container =
         svg.append("g")
@@ -582,8 +885,7 @@ function renderMindMap(
 
 
     /*
-       Restore previous camera after
-       expand/collapse.
+       Restore camera after expansion/collapse.
     */
 
     if (!fitAfterRender) {
@@ -611,14 +913,13 @@ function renderMindMap(
                     return null;
                 }
 
-
                 return node.children;
             }
         );
 
 
     /* =====================================================
-       TREE LAYOUT
+       BASE D3 TREE
     ===================================================== */
 
     const layout =
@@ -633,18 +934,10 @@ function renderMindMap(
 
 
     /* =====================================================
-       ANCHOR ROOT
+       ROOT ANCHOR
     ===================================================== */
 
-    /*
-       D3 naturally puts the root around the middle
-       of the vertical tree.
-
-       We explicitly reset the root to y = 0 so
-       it becomes our fixed reference point.
-    */
-
-    const rootX =
+    const originalRootX =
         root.x;
 
 
@@ -652,133 +945,20 @@ function renderMindMap(
         function (d) {
 
             d.x =
-                d.x - rootX;
+                d.x -
+                originalRootX;
         }
     );
 
 
-    /* =====================================================
-       FIRST LEVEL SPACING
-    ===================================================== */
+    /*
+       Now replace the generic D3 depth positioning
+       with our structured mind-map layout.
+    */
 
-    if (root.children) {
-
-        const children =
-            root.children;
-
-
-        const minimumSpacing =
-            105;
-
-
-        /*
-           Sort the branches by their calculated
-           vertical position.
-
-           We do NOT change the Markdown order.
-           This only affects their physical spacing.
-        */
-
-        children.sort(
-            function (a, b) {
-
-                return a.x - b.x;
-            }
-        );
-
-         /* Move primary branches closer to the root */
-         children.forEach(
-             function (child) {
-                 child.y -= 80;
-         
-                 child.each(
-                     function (d) {
-                         d.y -= 80;
-                     }
-                 );
-             }
-         );
-
-        /*
-           Push branches apart if they are too close.
-        */
-
-        for (
-            let i = 1;
-            i < children.length;
-            i++
-        ) {
-
-            const previous =
-                children[i - 1];
-
-            const current =
-                children[i];
-
-
-            const gap =
-                current.x -
-                previous.x;
-
-
-            if (
-                gap < minimumSpacing
-            ) {
-
-                const shift =
-                    minimumSpacing -
-                    gap;
-
-
-                current.each(
-                    function (d) {
-
-                        d.x +=
-                            shift;
-                    }
-                );
-            }
-        }
-
-
-        /*
-           Re-centre the first-level group around
-           the root without moving the root.
-        */
-
-        const first =
-            children[0];
-
-        const last =
-            children[
-                children.length - 1
-            ];
-
-
-        const groupCenter =
-            (
-                first.x +
-                last.x
-            ) / 2;
-
-
-        const adjustment =
-            -groupCenter;
-
-
-        children.forEach(
-            function (child) {
-
-                child.each(
-                    function (d) {
-
-                        d.x +=
-                            adjustment;
-                    }
-                );
-            }
-        );
-    }
+    applyStructuredLayout(
+        root
+    );
 
 
     /* =====================================================
@@ -795,13 +975,10 @@ function renderMindMap(
 
 
     linkGroup
-
         .selectAll("path")
-
         .data(
             root.links()
         )
-
         .join("path")
 
         .attr(
@@ -826,7 +1003,6 @@ function renderMindMap(
                         d.target
                     );
                 }
-
 
                 return "#c4c7ca";
             }
@@ -877,7 +1053,6 @@ function renderMindMap(
 
                 const x1 =
                     sourceRight;
-
 
                 const x2 =
                     targetLeft;
@@ -1060,7 +1235,9 @@ function renderMindMap(
                     d.depth === 1
                 ) {
 
-                    return branchColor(d);
+                    return branchColor(
+                        d
+                    );
                 }
 
 
@@ -1094,7 +1271,7 @@ function renderMindMap(
 
 
     /* =====================================================
-       COLOURED ACCENT
+       COLOURED PRIMARY ACCENT
     ===================================================== */
 
     nodes
@@ -1155,7 +1332,9 @@ function renderMindMap(
             "fill",
             function (d) {
 
-                return branchColor(d);
+                return branchColor(
+                    d
+                );
             }
         );
 
@@ -1346,7 +1525,9 @@ function renderMindMap(
             "stroke",
             function (d) {
 
-                return branchColor(d);
+                return branchColor(
+                    d
+                );
             }
         )
 
@@ -1418,7 +1599,9 @@ function renderMindMap(
             "fill",
             function (d) {
 
-                return branchColor(d);
+                return branchColor(
+                    d
+                );
             }
         )
 
@@ -1545,7 +1728,7 @@ function renderMindMap(
 
 
     /* =====================================================
-       CLICK
+       EXPAND / COLLAPSE CLICK
     ===================================================== */
 
     expandable.on(
@@ -1618,22 +1801,8 @@ function fitMap() {
     const width =
         svg.node().clientWidth;
 
-
     const height =
         svg.node().clientHeight;
-
-
-    /*
-       We intentionally do NOT centre the entire
-       bounding box.
-
-       A mind map should keep the root near the
-       left/centre and let the branches spread
-       towards the right.
-    */
-
-    const rootX =
-        root.y;
 
 
     const bounds =
@@ -1642,41 +1811,30 @@ function fitMap() {
             .getBBox();
 
 
-    const leftSpace =
-        rootX -
-        bounds.x;
+    /*
+       The root is always the visual anchor.
+    */
+
+    const rootX =
+        root.y;
 
 
-    const rightSpace =
-        bounds.x +
-        bounds.width -
-        rootX;
+    const horizontalSpace =
+        bounds.width +
+        160;
 
 
     const verticalSpace =
-        Math.max(
-            Math.abs(bounds.y),
-            Math.abs(
-                bounds.y +
-                bounds.height
-            )
-        );
+        bounds.height +
+        120;
 
-
-    /*
-       Leave generous space around the map.
-    */
 
     const horizontalScale =
         (
             width *
             0.88
         ) /
-        (
-            leftSpace +
-            rightSpace +
-            120
-        );
+        horizontalSpace;
 
 
     const verticalScale =
@@ -1684,18 +1842,8 @@ function fitMap() {
             height *
             0.88
         ) /
-        (
-            bounds.height +
-            100
-        );
+        verticalSpace;
 
-
-    /*
-       Keep the initial map readable.
-
-       We don't want Fit Map to reduce everything
-       to tiny text just because one branch is long.
-    */
 
     let scale =
         Math.min(
@@ -1707,7 +1855,7 @@ function fitMap() {
     scale =
         Math.max(
             scale,
-            0.65
+            0.55
         );
 
 
@@ -1719,13 +1867,12 @@ function fitMap() {
 
 
     /*
-       Put the root approximately 30% from
-       the left edge of the visible map.
+       Put root around 27% from the left.
     */
 
     const desiredRootX =
         width *
-        0.30;
+        0.27;
 
 
     const desiredRootY =
@@ -1784,7 +1931,6 @@ document
 
 
             svg.transition()
-
                 .call(
                     zoomBehaviour.scaleBy,
                     1.25
@@ -1811,7 +1957,6 @@ document
 
 
             svg.transition()
-
                 .call(
                     zoomBehaviour.scaleBy,
                     0.8
