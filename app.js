@@ -353,11 +353,15 @@ function renderMindMap(tree, fitAfterRender = false) {
     layout(root);
 
 
-    const xOffset =
-        width / 2;
-
-    const yOffset =
-        height / 2;
+   /* ---------------------------------------------
+   Keep the root node anchored
+   --------------------------------------------- */
+   
+   const rootX = root.x;
+   
+   root.each(function(d) {
+       d.x = d.x - rootX;
+   });
 
 
     /* =================================================
