@@ -87,6 +87,75 @@ imageInput.addEventListener(
 
 }
 
+reader.readAsDataURL(file);
+    }
+);
+
+}
+
+/* =========================================================
+NODE APPEARANCE
+========================================================= */
+
+const nodeAppearance = {};
+
+const ICON_OPTIONS = [
+    "",
+    "⭐",
+    "📌",
+    "💡",
+    "📚",
+    "🏛️",
+    "⚔️",
+    "⛏️",
+    "🐄",
+    "🌾",
+    "🚂",
+    "🗺️",
+    "🌎",
+    "🏆",
+    "👤",
+    "👥",
+    "🔥",
+    "💰",
+    "🎯",
+    "🔬",
+    "🧪",
+    "🎨",
+    "✏️",
+    "📖",
+    "🏠",
+    "🌳",
+    "☀️",
+    "🌧️",
+    "❄️",
+    "⚠️"
+];
+
+function getNodeAppearanceKey(d) {
+
+    const parts = [];
+
+    let current = d;
+
+    while (current) {
+
+        if (
+            current.data &&
+            current.data.title
+        ) {
+            parts.unshift(
+                current.data.title
+            );
+        }
+
+        current = current.parent;
+    }
+
+    return parts.join(" > ");
+}
+
+
 /* =========================================================
 MARKDOWN PARSER
 ========================================================= */
