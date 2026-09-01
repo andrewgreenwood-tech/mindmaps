@@ -81,13 +81,9 @@ imageInput.addEventListener(
                 }
             };
 
+       
+
         reader.readAsDataURL(file);
-    }
-);
-
-}
-
-reader.readAsDataURL(file);
     }
 );
 
@@ -376,7 +372,7 @@ function openAppearancePanel(
                 this.value;
 
             renderMindMap(
-                treeData,
+                mapData,
                 false
             );
 
@@ -460,7 +456,7 @@ function openAppearancePanel(
                         readerEvent.target.result;
 
                     renderMindMap(
-                        treeData,
+                        mapData,
                         false
                     );
 
@@ -575,7 +571,7 @@ function openAppearancePanel(
             };
 
             renderMindMap(
-                treeData,
+                mapData,
                 false
             );
 
