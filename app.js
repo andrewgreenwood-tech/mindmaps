@@ -686,6 +686,18 @@ function renderMindMap(
             }
         );
 
+         /* Move primary branches closer to the root */
+         children.forEach(
+             function (child) {
+                 child.y -= 80;
+         
+                 child.each(
+                     function (d) {
+                         d.y -= 80;
+                     }
+                 );
+             }
+         );
 
         /*
            Push branches apart if they are too close.
