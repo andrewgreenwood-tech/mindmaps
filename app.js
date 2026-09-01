@@ -1,6 +1,6 @@
 /* =========================================================
    MIND MAP GENERATOR
-   Version 4 — Stable Expand / Collapse + Improved Layout
+   Version 5 — Card Style Visual Map
 ========================================================= */
 
 
@@ -65,10 +65,8 @@ imageInput.addEventListener(
             return;
         }
 
-
         const reader =
             new FileReader();
-
 
         reader.onload =
             function (event) {
@@ -82,7 +80,6 @@ imageInput.addEventListener(
                 imagePreview.style.display =
                     "block";
             };
-
 
         reader.readAsDataURL(file);
     }
@@ -100,14 +97,11 @@ function parseMarkdown(markdown) {
             .replace(/\r\n/g, "\n")
             .split("\n");
 
-
     let root =
         null;
 
-
     const stack =
         [];
-
 
     for (
         let rawLine of lines
@@ -118,7 +112,6 @@ function parseMarkdown(markdown) {
                 /\t/g,
                 "    "
             );
-
 
         if (!line.trim()) {
             continue;
@@ -134,7 +127,6 @@ function parseMarkdown(markdown) {
                 /^(#{1,6})\s+(.+)$/
             );
 
-
         if (headingMatch) {
 
             const level =
@@ -142,7 +134,6 @@ function parseMarkdown(markdown) {
 
             const title =
                 headingMatch[2].trim();
-
 
             const node = {
 
@@ -160,13 +151,8 @@ function parseMarkdown(markdown) {
 
                 collapsed:
                     false
-
             };
 
-
-            /* ---------------------------------------------
-               Root
-            --------------------------------------------- */
 
             if (
                 level === 1 ||
@@ -185,10 +171,6 @@ function parseMarkdown(markdown) {
                 continue;
             }
 
-
-            /* ---------------------------------------------
-               Find parent
-            --------------------------------------------- */
 
             while (
                 stack.length > 0 &&
@@ -218,7 +200,6 @@ function parseMarkdown(markdown) {
                 );
             }
 
-
             continue;
         }
 
@@ -231,7 +212,6 @@ function parseMarkdown(markdown) {
             line.match(
                 /^\s*[-*+]\s+(.+)$/
             );
-
 
         if (bulletMatch) {
 
@@ -251,7 +231,6 @@ function parseMarkdown(markdown) {
 
                 collapsed:
                     false
-
             };
 
 
@@ -270,13 +249,12 @@ function parseMarkdown(markdown) {
         }
     }
 
-
     return root;
 }
 
 
 /* =========================================================
-   BRANCH COLOR
+   BRANCH COLORS
 ========================================================= */
 
 function branchColor(node) {
@@ -284,15 +262,10 @@ function branchColor(node) {
     const colors = [
 
         "#3977c9",
-
         "#4f9a5a",
-
         "#d99427",
-
         "#8757a8",
-
         "#c45b5b",
-
         "#328f8f"
 
     ];
@@ -334,6 +307,188 @@ function branchColor(node) {
 
 
 /* =========================================================
+   NODE DIMENSIONS
+========================================================= */
+
+function nodeWidth(d) {
+
+    if (d.depth === 0) {
+        return 330;
+    }
+
+    if (d.depth === 1) {
+        return 270;
+    }
+
+    if (d.depth === 2) {
+        return 230;
+    }
+
+    return 205;
+}
+
+
+function nodeHeight(d) {
+
+    if (d.depth === 0) {
+        return 125;
+    }
+
+    if (d.depth === 1) {
+        return 76;
+    }
+
+    if (d.depth === 2) {
+        return 60;
+    }
+
+    return 50;
+}
+
+
+/* =========================================================
+   TEXT WRAPPING
+========================================================= */
+
+function wrapNodeText(
+    selection,
+    width
+) {
+
+    selection.each(
+        function (d) {
+
+            const text =
+                d3.select(this);
+
+            const words =
+                d.data.title
+                    .split(/\s+/)
+                    .reverse();
+
+            let word;
+
+            let line = [];
+
+            let lineNumber = 0;
+
+            const lineHeight =
+                d.depth === 0
+                    ? 25
+                    : d.depth === 1
+                        ? 20
+                        : 17;
+
+            const y =
+                0;
+
+            const x =
+                0;
+
+            let tspan =
+                text
+                    .text(null)
+                    .append("tspan")
+                    .attr(
+                        "x",
+                        x
+                    )
+                    .attr(
+                        "y",
+                        y
+                    )
+                    .attr(
+                        "dy",
+                        "0em"
+                    );
+
+
+            while (
+                (word = words.pop())
+            ) {
+
+                line.push(word);
+
+                tspan.text(
+                    line.join(" ")
+                );
+
+
+                if (
+                    tspan.node()
+                        .getComputedTextLength()
+                    >
+                    width
+                ) {
+
+                    line.pop();
+
+                    tspan.text(
+                        line.join(" ")
+                    );
+
+                    line = [
+                        word
+                    ];
+
+                    lineNumber++;
+
+                    tspan =
+                        text
+                            .append("tspan")
+                            .attr(
+                                "x",
+                                x
+                            )
+                            .attr(
+                                "y",
+                                y
+                            )
+                            .attr(
+                                "dy",
+                                `${lineHeight}px`
+                            )
+                            .text(
+                                word
+                            );
+                }
+            }
+
+
+            /*
+               Centre multiple lines.
+            */
+
+            const tspans =
+                text.selectAll("tspan");
+
+
+            const totalHeight =
+                (tspans.size() - 1) *
+                lineHeight;
+
+
+            tspans.each(
+                function (
+                    unused,
+                    i
+                ) {
+
+                    d3.select(this)
+                        .attr(
+                            "dy",
+                            i === 0
+                                ? `${-totalHeight / 2}px`
+                                : `${lineHeight}px`
+                        );
+                }
+            );
+        }
+    );
+}
+
+
+/* =========================================================
    RENDER MIND MAP
 ========================================================= */
 
@@ -343,10 +498,7 @@ function renderMindMap(
 ) {
 
     /*
-       Remember the current camera position.
-
-       This is important when a user expands
-       or collapses a branch.
+       Preserve camera position.
     */
 
     const previousTransform =
@@ -354,10 +506,6 @@ function renderMindMap(
             svg.node()
         );
 
-
-    /*
-       Clear the existing SVG contents.
-    */
 
     svg.selectAll("*").remove();
 
@@ -367,29 +515,19 @@ function renderMindMap(
     }
 
 
-    /* -----------------------------------------------------
-       SVG dimensions
-    ----------------------------------------------------- */
+    /* =====================================================
+       SVG SIZE
+    ===================================================== */
 
     const width =
         svg.node().clientWidth;
-
 
     const height =
         svg.node().clientHeight;
 
 
-    /*
-       Coordinate offsets.
-
-       D3's tree uses its own coordinate system.
-       These move the tree into the centre area
-       of the SVG.
-    */
-
     const xOffset =
         width / 2;
-
 
     const yOffset =
         height / 2;
@@ -427,7 +565,6 @@ function renderMindMap(
                         "transform",
                         event.transform
                     );
-
                 }
             );
 
@@ -438,11 +575,8 @@ function renderMindMap(
 
 
     /*
-       When this is an expand/collapse operation,
-       restore the previous camera.
-
-       When generating a completely new map,
-       Fit Map will position it instead.
+       Restore camera when expanding/
+       collapsing a branch.
     */
 
     if (!fitAfterRender) {
@@ -463,18 +597,12 @@ function renderMindMap(
             tree,
             node => {
 
-                /*
-                   Collapsed nodes have no visible
-                   children in the hierarchy.
-                */
-
                 if (
                     node.collapsed
                 ) {
 
                     return null;
                 }
-
 
                 return node.children;
             }
@@ -488,8 +616,8 @@ function renderMindMap(
     const layout =
         d3.tree()
             .nodeSize([
-                110,
-                260
+                125,
+                300
             ]);
 
 
@@ -509,18 +637,16 @@ function renderMindMap(
 
             d.x =
                 d.x - rootX;
-
         }
     );
 
 
-    /*
-       Prevent a first-level branch from being
-       placed directly over the root.
-    */
+    /* =====================================================
+       ROOT GAP
+    ===================================================== */
 
     const minimumRootGap =
-        70;
+        90;
 
 
     if (root.children) {
@@ -544,7 +670,6 @@ function renderMindMap(
 
                             d.x +=
                                 shift;
-
                         }
                     );
                 }
@@ -574,6 +699,11 @@ function renderMindMap(
         .join("path")
 
         .attr(
+            "class",
+            "map-link"
+        )
+
+        .attr(
             "fill",
             "none"
         )
@@ -591,8 +721,7 @@ function renderMindMap(
                     );
                 }
 
-
-                return "#b8b8b8";
+                return "#c4c7ca";
             }
         )
 
@@ -607,14 +736,12 @@ function renderMindMap(
                     return 4;
                 }
 
-
                 if (
                     d.target.depth === 2
                 ) {
 
                     return 2.5;
                 }
-
 
                 return 1.5;
             }
@@ -627,24 +754,43 @@ function renderMindMap(
 
         .attr(
             "d",
-            d3.linkHorizontal()
+            d => {
 
-                .x(
-                    d =>
-                        d.y +
-                        xOffset
-                )
+                const sourceWidth =
+                    nodeWidth(
+                        d.source
+                    );
 
-                .y(
-                    d =>
-                        d.x +
-                        yOffset
-                )
+                const targetWidth =
+                    nodeWidth(
+                        d.target
+                    );
+
+
+                const sourceX =
+                    d.source.y +
+                    xOffset +
+                    sourceWidth / 2;
+
+
+                const targetX =
+                    d.target.y +
+                    xOffset -
+                    targetWidth / 2;
+
+
+                return `
+                    M ${sourceX},${d.source.x + yOffset}
+                    C ${(sourceX + targetX) / 2},${d.source.x + yOffset}
+                      ${(sourceX + targetX) / 2},${d.target.x + yOffset}
+                      ${targetX},${d.target.x + yOffset}
+                `;
+            }
         );
 
 
     /* =====================================================
-       NODES
+       NODE GROUP
     ===================================================== */
 
     const nodeGroup =
@@ -669,7 +815,22 @@ function renderMindMap(
 
             .attr(
                 "class",
-                "mind-node"
+                d => {
+
+                    if (d.depth === 0) {
+                        return "mind-node root-node";
+                    }
+
+                    if (d.depth === 1) {
+                        return "mind-node major-node";
+                    }
+
+                    if (d.depth === 2) {
+                        return "mind-node secondary-node";
+                    }
+
+                    return "mind-node detail-node";
+                }
             )
 
             .attr(
@@ -683,39 +844,67 @@ function renderMindMap(
 
 
     /* =====================================================
-       NODE CIRCLE
+       NODE CARDS
     ===================================================== */
 
     nodes
-
-        .append("circle")
+        .append("rect")
 
         .attr(
-            "r",
-            d => {
+            "class",
+            "node-card"
+        )
 
-                if (
-                    d.depth === 0
-                ) {
+        .attr(
+            "x",
+            d =>
+                -nodeWidth(d) / 2
+        )
 
-                    return 11;
-                }
+        .attr(
+            "y",
+            d =>
+                -nodeHeight(d) / 2
+        )
 
+        .attr(
+            "width",
+            d =>
+                nodeWidth(d)
+        )
 
-                if (
-                    d.depth === 1
-                ) {
+        .attr(
+            "height",
+            d =>
+                nodeHeight(d)
+        )
 
-                    return 8;
-                }
+        .attr(
+            "rx",
+            d =>
+                d.depth === 0
+                    ? 22
+                    : 15
+        )
 
-
-                return 5;
-            }
+        .attr(
+            "ry",
+            d =>
+                d.depth === 0
+                    ? 22
+                    : 15
         )
 
         .attr(
             "fill",
+            d =>
+                d.depth === 0
+                    ? "#ffffff"
+                    : "#ffffff"
+        )
+
+        .attr(
+            "stroke",
             d => {
 
                 if (
@@ -725,34 +914,203 @@ function renderMindMap(
                     return "#20242a";
                 }
 
+                if (
+                    d.depth === 1
+                ) {
+
+                    return branchColor(d);
+                }
+
+                return "#d5d8dc";
+            }
+        )
+
+        .attr(
+            "stroke-width",
+            d => {
+
+                if (
+                    d.depth === 0
+                ) {
+
+                    return 3;
+                }
 
                 if (
                     d.depth === 1
                 ) {
 
-                    return branchColor(
-                        d
-                    );
+                    return 2.5;
                 }
 
-
-                return "#777";
+                return 1.5;
             }
-        )
-
-        .attr(
-            "stroke",
-            "white"
-        )
-
-        .attr(
-            "stroke-width",
-            2
         );
 
 
     /* =====================================================
-       EXPAND / COLLAPSE CONTROL
+       MAJOR BRANCH ACCENT
+    ===================================================== */
+
+    nodes
+        .filter(
+            d =>
+                d.depth === 1
+        )
+
+        .append("rect")
+
+        .attr(
+            "class",
+            "node-accent"
+        )
+
+        .attr(
+            "x",
+            d =>
+                -nodeWidth(d) / 2
+        )
+
+        .attr(
+            "y",
+            d =>
+                -nodeHeight(d) / 2
+        )
+
+        .attr(
+            "width",
+            7
+        )
+
+        .attr(
+            "height",
+            d =>
+                nodeHeight(d)
+        )
+
+        .attr(
+            "rx",
+            3.5
+        )
+
+        .attr(
+            "fill",
+            d =>
+                branchColor(d)
+        );
+
+
+    /* =====================================================
+       NODE TEXT
+    ===================================================== */
+
+    const nodeText =
+        nodes
+
+            .append("text")
+
+            .attr(
+                "class",
+                d => {
+
+                    if (
+                        d.depth === 0
+                    ) {
+
+                        return "node-title root-title";
+                    }
+
+                    if (
+                        d.data.type ===
+                        "detail"
+                    ) {
+
+                        return "node-detail";
+                    }
+
+                    return "node-title";
+                }
+            )
+
+            .attr(
+                "text-anchor",
+                "middle"
+            )
+
+            .attr(
+                "dominant-baseline",
+                "middle"
+            )
+
+            .attr(
+                "font-size",
+                d => {
+
+                    if (
+                        d.depth === 0
+                    ) {
+
+                        return "24px";
+                    }
+
+                    if (
+                        d.depth === 1
+                    ) {
+
+                        return "17px";
+                    }
+
+                    if (
+                        d.depth === 2
+                    ) {
+
+                        return "14px";
+                    }
+
+                    return "12px";
+                }
+            )
+
+            .attr(
+                "font-weight",
+                d =>
+                    d.depth <= 1
+                        ? 700
+                        : 400
+            )
+
+            .attr(
+                "fill",
+                d => {
+
+                    if (
+                        d.depth === 0
+                    ) {
+
+                        return "#20242a";
+                    }
+
+                    if (
+                        d.data.type ===
+                        "detail"
+                    ) {
+
+                        return "#62676d";
+                    }
+
+                    return "#252a30";
+                }
+            );
+
+
+    wrapNodeText(
+        nodeText,
+        d => nodeWidth(d) - 38
+    );
+
+
+    /* =====================================================
+       EXPAND / COLLAPSE
     ===================================================== */
 
     const expandable =
@@ -764,7 +1122,7 @@ function renderMindMap(
 
 
     /* -----------------------------------------------------
-       Control circle
+       Expand button
     ----------------------------------------------------- */
 
     expandable
@@ -778,22 +1136,24 @@ function renderMindMap(
 
         .attr(
             "cx",
-            0
+            d =>
+                nodeWidth(d) / 2 - 19
         )
 
         .attr(
             "cy",
-            0
+            d =>
+                -nodeHeight(d) / 2 + 19
         )
 
         .attr(
             "r",
-            13
+            12
         )
 
         .attr(
             "fill",
-            "white"
+            "#ffffff"
         )
 
         .attr(
@@ -809,7 +1169,7 @@ function renderMindMap(
 
 
     /* -----------------------------------------------------
-       Plus / minus symbol
+       Plus / minus
     ----------------------------------------------------- */
 
     expandable
@@ -823,12 +1183,14 @@ function renderMindMap(
 
         .attr(
             "x",
-            0
+            d =>
+                nodeWidth(d) / 2 - 19
         )
 
         .attr(
             "y",
-            1
+            d =>
+                -nodeHeight(d) / 2 + 20
         )
 
         .attr(
@@ -866,99 +1228,6 @@ function renderMindMap(
 
 
     /* =====================================================
-       TEXT
-    ===================================================== */
-
-    nodes
-
-        .append("text")
-
-        .attr(
-            "class",
-            d => {
-
-                if (
-                    d.depth === 0
-                ) {
-
-                    return "node-title";
-                }
-
-
-                if (
-                    d.data.type ===
-                    "detail"
-                ) {
-
-                    return "node-detail";
-                }
-
-
-                return "node-title";
-            }
-        )
-
-        .attr(
-            "x",
-            d => {
-
-                if (
-                    d.data.children &&
-                    d.data.children.length > 0
-                ) {
-
-                    return 24;
-                }
-
-
-                return 17;
-            }
-        )
-
-        .attr(
-            "dy",
-            "0.35em"
-        )
-
-        .attr(
-            "font-size",
-            d => {
-
-                if (
-                    d.depth === 0
-                ) {
-
-                    return "24px";
-                }
-
-
-                if (
-                    d.depth === 1
-                ) {
-
-                    return "17px";
-                }
-
-
-                if (
-                    d.depth === 2
-                ) {
-
-                    return "14px";
-                }
-
-
-                return "12px";
-            }
-        )
-
-        .text(
-            d =>
-                d.data.title
-        );
-
-
-    /* =====================================================
        ROOT IMAGE
     ===================================================== */
 
@@ -973,6 +1242,43 @@ function renderMindMap(
 
         rootNode
 
+            .append("clipPath")
+
+            .attr(
+                "id",
+                "root-image-clip"
+            )
+
+            .append("rect")
+
+            .attr(
+                "x",
+                -nodeWidth(root) / 2 + 14
+            )
+
+            .attr(
+                "y",
+                -nodeHeight(root) / 2 + 14
+            )
+
+            .attr(
+                "width",
+                70
+            )
+
+            .attr(
+                "height",
+                nodeHeight(root) - 28
+            )
+
+            .attr(
+                "rx",
+                12
+            );
+
+
+        rootNode
+
             .append("image")
 
             .attr(
@@ -981,28 +1287,38 @@ function renderMindMap(
             )
 
             .attr(
+                "class",
+                "root-image"
+            )
+
+            .attr(
                 "x",
-                -75
+                -nodeWidth(root) / 2 + 14
             )
 
             .attr(
                 "y",
-                -105
+                -nodeHeight(root) / 2 + 14
             )
 
             .attr(
                 "width",
-                150
+                70
             )
 
             .attr(
                 "height",
-                75
+                nodeHeight(root) - 28
             )
 
             .attr(
                 "preserveAspectRatio",
                 "xMidYMid slice"
+            )
+
+            .attr(
+                "clip-path",
+                "url(#root-image-clip)"
             );
     }
 
@@ -1021,18 +1337,9 @@ function renderMindMap(
             event.stopPropagation();
 
 
-            /*
-               Toggle the actual data node.
-            */
-
             d.data.collapsed =
                 !d.data.collapsed;
 
-
-            /*
-               Re-render while preserving
-               the current camera position.
-            */
 
             renderMindMap(
                 tree,
@@ -1119,7 +1426,6 @@ function fitMap() {
 
     const x =
         width / 2 -
-
         scale *
         (
             bounds.x +
@@ -1129,7 +1435,6 @@ function fitMap() {
 
     const y =
         height / 2 -
-
         scale *
         (
             bounds.y +
@@ -1271,11 +1576,6 @@ generateButton.addEventListener(
             "hidden"
         );
 
-
-        /*
-           A completely new map should
-           automatically fit to the screen.
-        */
 
         renderMindMap(
             tree,
