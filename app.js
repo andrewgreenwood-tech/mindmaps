@@ -154,7 +154,577 @@ function getNodeAppearanceKey(d) {
 
     return parts.join(" > ");
 }
+/* =========================================================
+   NODE APPEARANCE PANEL
+========================================================= */
 
+let appearancePanel =
+    document.getElementById(
+        "nodeAppearancePanel"
+    );
+
+if (!appearancePanel) {
+
+    appearancePanel =
+        document.createElement("div");
+
+    appearancePanel.id =
+        "nodeAppearancePanel";
+
+    appearancePanel.style.position =
+        "fixed";
+
+    appearancePanel.style.display =
+        "none";
+
+    appearancePanel.style.zIndex =
+        "99999";
+
+    appearancePanel.style.width =
+        "280px";
+
+    appearancePanel.style.padding =
+        "18px";
+
+    appearancePanel.style.background =
+        "#ffffff";
+
+    appearancePanel.style.border =
+        "1px solid #d8dce1";
+
+    appearancePanel.style.borderRadius =
+        "14px";
+
+    appearancePanel.style.boxShadow =
+        "0 12px 35px rgba(0,0,0,0.20)";
+
+    appearancePanel.style.fontFamily =
+        "Arial, sans-serif";
+
+    document.body.appendChild(
+        appearancePanel
+    );
+}
+
+
+/* =========================================================
+   OPEN PANEL
+========================================================= */
+
+function openAppearancePanel(
+    d,
+    event
+) {
+
+    event.stopPropagation();
+
+    const key =
+        getNodeAppearanceKey(d);
+
+
+    if (!nodeAppearance[key]) {
+
+        nodeAppearance[key] = {
+            icon: "",
+            image: null
+        };
+    }
+
+
+    const appearance =
+        nodeAppearance[key];
+
+
+    appearancePanel.innerHTML = "";
+
+
+    /* -----------------------------------------------------
+       TITLE
+    ----------------------------------------------------- */
+
+    const heading =
+        document.createElement("div");
+
+    heading.textContent =
+        "Node appearance";
+
+    heading.style.fontSize =
+        "17px";
+
+    heading.style.fontWeight =
+        "700";
+
+    heading.style.marginBottom =
+        "4px";
+
+    appearancePanel.appendChild(
+        heading
+    );
+
+
+    const nodeName =
+        document.createElement("div");
+
+    nodeName.textContent =
+        d.data.title;
+
+    nodeName.style.fontSize =
+        "12px";
+
+    nodeName.style.color =
+        "#70757b";
+
+    nodeName.style.marginBottom =
+        "16px";
+
+    nodeName.style.whiteSpace =
+        "nowrap";
+
+    nodeName.style.overflow =
+        "hidden";
+
+    nodeName.style.textOverflow =
+        "ellipsis";
+
+    appearancePanel.appendChild(
+        nodeName
+    );
+
+
+    /* -----------------------------------------------------
+       ICON
+    ----------------------------------------------------- */
+
+    const iconLabel =
+        document.createElement("div");
+
+    iconLabel.textContent =
+        "Icon";
+
+    iconLabel.style.fontSize =
+        "12px";
+
+    iconLabel.style.fontWeight =
+        "600";
+
+    iconLabel.style.marginBottom =
+        "6px";
+
+    appearancePanel.appendChild(
+        iconLabel
+    );
+
+
+    const iconSelect =
+        document.createElement("select");
+
+    iconSelect.style.width =
+        "100%";
+
+    iconSelect.style.height =
+        "40px";
+
+    iconSelect.style.border =
+        "1px solid #d1d5db";
+
+    iconSelect.style.borderRadius =
+        "8px";
+
+    iconSelect.style.padding =
+        "0 8px";
+
+    iconSelect.style.fontSize =
+        "20px";
+
+    ICON_OPTIONS.forEach(
+        function (icon) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                icon;
+
+            option.textContent =
+                icon
+                    ? icon
+                    : "No icon";
+
+            if (
+                icon ===
+                appearance.icon
+            ) {
+
+                option.selected =
+                    true;
+            }
+
+            iconSelect.appendChild(
+                option
+            );
+        }
+    );
+
+
+    iconSelect.addEventListener(
+        "change",
+        function () {
+
+            appearance.icon =
+                this.value;
+
+            renderMindMap(
+                treeData,
+                false
+            );
+
+            openAppearancePanel(
+                d,
+                event
+            );
+        }
+    );
+
+
+    appearancePanel.appendChild(
+        iconSelect
+    );
+
+
+    /* -----------------------------------------------------
+       PICTURE
+    ----------------------------------------------------- */
+
+    const pictureLabel =
+        document.createElement("div");
+
+    pictureLabel.textContent =
+        "Picture";
+
+    pictureLabel.style.fontSize =
+        "12px";
+
+    pictureLabel.style.fontWeight =
+        "600";
+
+    pictureLabel.style.marginTop =
+        "16px";
+
+    pictureLabel.style.marginBottom =
+        "6px";
+
+    appearancePanel.appendChild(
+        pictureLabel
+    );
+
+
+    const pictureInput =
+        document.createElement("input");
+
+    pictureInput.type =
+        "file";
+
+    pictureInput.accept =
+        "image/*";
+
+    pictureInput.style.width =
+        "100%";
+
+    pictureInput.style.fontSize =
+        "12px";
+
+
+    pictureInput.addEventListener(
+        "change",
+        function () {
+
+            const file =
+                this.files &&
+                this.files[0];
+
+            if (!file) {
+                return;
+            }
+
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function (readerEvent) {
+
+                    appearance.image =
+                        readerEvent.target.result;
+
+                    renderMindMap(
+                        treeData,
+                        false
+                    );
+
+                    openAppearancePanel(
+                        d,
+                        event
+                    );
+                };
+
+
+            reader.readAsDataURL(
+                file
+            );
+        }
+    );
+
+
+    appearancePanel.appendChild(
+        pictureInput
+    );
+
+
+    /* -----------------------------------------------------
+       PREVIEW
+    ----------------------------------------------------- */
+
+    if (appearance.image) {
+
+        const preview =
+            document.createElement(
+                "img"
+            );
+
+        preview.src =
+            appearance.image;
+
+        preview.style.width =
+            "80px";
+
+        preview.style.height =
+            "80px";
+
+        preview.style.objectFit =
+            "cover";
+
+        preview.style.borderRadius =
+            "10px";
+
+        preview.style.marginTop =
+            "10px";
+
+        preview.style.display =
+            "block";
+
+        appearancePanel.appendChild(
+            preview
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       BUTTONS
+    ----------------------------------------------------- */
+
+    const buttons =
+        document.createElement("div");
+
+    buttons.style.display =
+        "flex";
+
+    buttons.style.gap =
+        "8px";
+
+    buttons.style.marginTop =
+        "16px";
+
+
+    const clearButton =
+        document.createElement(
+            "button"
+        );
+
+    clearButton.textContent =
+        "Clear";
+
+    clearButton.style.flex =
+        "1";
+
+    clearButton.style.padding =
+        "8px";
+
+    clearButton.style.border =
+        "1px solid #d1d5db";
+
+    clearButton.style.borderRadius =
+        "8px";
+
+    clearButton.style.background =
+        "#f8f9fa";
+
+    clearButton.style.cursor =
+        "pointer";
+
+
+    clearButton.addEventListener(
+        "click",
+        function () {
+
+            nodeAppearance[key] = {
+                icon: "",
+                image: null
+            };
+
+            renderMindMap(
+                treeData,
+                false
+            );
+
+            closeAppearancePanel();
+        }
+    );
+
+
+    const doneButton =
+        document.createElement(
+            "button"
+        );
+
+    doneButton.textContent =
+        "Done";
+
+    doneButton.style.flex =
+        "1";
+
+    doneButton.style.padding =
+        "8px";
+
+    doneButton.style.border =
+        "none";
+
+    doneButton.style.borderRadius =
+        "8px";
+
+    doneButton.style.background =
+        "#3977c9";
+
+    doneButton.style.color =
+        "#ffffff";
+
+    doneButton.style.cursor =
+        "pointer";
+
+
+    doneButton.addEventListener(
+        "click",
+        function () {
+
+            closeAppearancePanel();
+        }
+    );
+
+
+    buttons.appendChild(
+        clearButton
+    );
+
+    buttons.appendChild(
+        doneButton
+    );
+
+    appearancePanel.appendChild(
+        buttons
+    );
+
+
+    /* -----------------------------------------------------
+       POSITION
+    ----------------------------------------------------- */
+
+    appearancePanel.style.display =
+        "block";
+
+
+    let left =
+        event.clientX + 15;
+
+    let top =
+        event.clientY + 15;
+
+
+    const panelWidth =
+        280;
+
+    const panelHeight =
+        appearancePanel.offsetHeight;
+
+
+    if (
+        left + panelWidth >
+        window.innerWidth
+    ) {
+
+        left =
+            event.clientX -
+            panelWidth -
+            15;
+    }
+
+
+    if (
+        top + panelHeight >
+        window.innerHeight
+    ) {
+
+        top =
+            event.clientY -
+            panelHeight -
+            15;
+    }
+
+
+    appearancePanel.style.left =
+        Math.max(
+            10,
+            left
+        ) + "px";
+
+    appearancePanel.style.top =
+        Math.max(
+            10,
+            top
+        ) + "px";
+}
+
+
+/* =========================================================
+   CLOSE PANEL
+========================================================= */
+
+function closeAppearancePanel() {
+
+    if (appearancePanel) {
+
+        appearancePanel.style.display =
+            "none";
+    }
+}
+
+
+document.addEventListener(
+    "click",
+    function (event) {
+
+        if (
+            appearancePanel &&
+            !appearancePanel.contains(
+                event.target
+            )
+        ) {
+
+            closeAppearancePanel();
+        }
+    }
+);
 
 /* =========================================================
 MARKDOWN PARSER
@@ -1235,6 +1805,147 @@ nodes
             branchColor(d)
     );
 
+/* -------------------------------------------------
+   NODE APPEARANCE
+------------------------------------------------- */
+
+/*
+   Add an icon to the node when one has been selected.
+*/
+
+nodes.each(
+    function (d) {
+
+        const key =
+            getNodeAppearanceKey(d);
+
+        const appearance =
+            nodeAppearance[key];
+
+        if (!appearance) {
+            return;
+        }
+
+
+        /* ---------------------------------------------
+           PICTURE
+        --------------------------------------------- */
+
+        if (appearance.image) {
+
+            const imageSize =
+                d.depth === 0
+                    ? 58
+                    : d.depth === 1
+                        ? 46
+                        : 38;
+
+
+            const image =
+                d3.select(this)
+                    .append("image")
+
+                    .attr(
+                        "class",
+                        "node-image"
+                    )
+
+                    .attr(
+                        "href",
+                        appearance.image
+                    )
+
+                    .attr(
+                        "x",
+                        -nodeWidth(d) / 2 + 12
+                    )
+
+                    .attr(
+                        "y",
+                        -imageSize / 2
+                    )
+
+                    .attr(
+                        "width",
+                        imageSize
+                    )
+
+                    .attr(
+                        "height",
+                        imageSize
+                    )
+
+                    .attr(
+                        "preserveAspectRatio",
+                        "xMidYMid slice"
+                    );
+
+
+            /*
+               Rounded image corners.
+            */
+
+            image.style(
+                "clip-path",
+                "inset(0 round 10px)"
+            );
+        }
+
+
+        /* ---------------------------------------------
+           ICON
+        --------------------------------------------- */
+
+        if (
+            appearance.icon &&
+            !appearance.image
+        ) {
+
+            d3.select(this)
+
+                .append("text")
+
+                .attr(
+                    "class",
+                    "node-icon"
+                )
+
+                .attr(
+                    "x",
+                    -nodeWidth(d) / 2 + 28
+                )
+
+                .attr(
+                    "y",
+                    0
+                )
+
+                .attr(
+                    "text-anchor",
+                    "middle"
+                )
+
+                .attr(
+                    "dominant-baseline",
+                    "middle"
+                )
+
+                .attr(
+                    "font-size",
+                    d.depth === 0
+                        ? "28px"
+                        : d.depth === 1
+                            ? "23px"
+                            : "20px"
+                )
+
+                .text(
+                    appearance.icon
+                );
+        }
+    }
+);
+
 
 /* -------------------------------------------------
    TEXT
@@ -1345,10 +2056,15 @@ const text =
         );
 
 
+/*
+   Keep the existing text wrapping.
+*/
+
 wrapText(
     text,
     190
 );
+
 
 
 /* -------------------------------------------------
@@ -1469,7 +2185,23 @@ expandable
                 ? "+"
                 : "−"
     );
+/* -------------------------------------------------
+   NODE APPEARANCE CLICK
+------------------------------------------------- */
 
+nodes.on(
+    "contextmenu",
+    function (event, d) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        openAppearancePanel(
+            d,
+            event
+        );
+    }
+);
 
 /* -------------------------------------------------
    ROOT IMAGE
