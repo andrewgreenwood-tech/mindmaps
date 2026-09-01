@@ -290,6 +290,12 @@ function renderMindMap(tree, fitAfterRender = false) {
     const height =
         svg.node().clientHeight;
 
+   const xOffset =
+    width / 2;
+
+   const yOffset =
+       height / 2;
+
 
     /* ---------------------------------------------
        Main container
