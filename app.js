@@ -1944,7 +1944,7 @@ function fitMap() {
     */
 
     const targetRootX =
-        width * 0.18;
+        width * 0.15;
 
 
     const targetRootY =
