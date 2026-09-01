@@ -1,6 +1,6 @@
 /* =========================================================
    MIND MAP GENERATOR
-   Version 6 — Structured Mind Map Layout
+   Version 6 — Subtree Layout Engine
 ========================================================= */
 
 
@@ -103,6 +103,7 @@ function parseMarkdown(markdown) {
     const stack =
         [];
 
+
     for (
         let rawLine of lines
     ) {
@@ -112,6 +113,7 @@ function parseMarkdown(markdown) {
                 /\t/g,
                 "    "
             );
+
 
         if (!line.trim()) {
             continue;
@@ -127,6 +129,7 @@ function parseMarkdown(markdown) {
                 /^(#{1,6})\s+(.+)$/
             );
 
+
         if (headingMatch) {
 
             const level =
@@ -134,6 +137,7 @@ function parseMarkdown(markdown) {
 
             const title =
                 headingMatch[2].trim();
+
 
             const node = {
 
@@ -164,7 +168,9 @@ function parseMarkdown(markdown) {
             ) {
 
                 if (!root) {
-                    root = node;
+
+                    root =
+                        node;
                 }
 
                 stack.length =
@@ -210,6 +216,7 @@ function parseMarkdown(markdown) {
                 );
             }
 
+
             continue;
         }
 
@@ -222,6 +229,7 @@ function parseMarkdown(markdown) {
             line.match(
                 /^\s*[-*+]\s+(.+)$/
             );
+
 
         if (bulletMatch) {
 
@@ -258,6 +266,7 @@ function parseMarkdown(markdown) {
             }
         }
     }
+
 
     return root;
 }
@@ -305,6 +314,7 @@ function branchColor(node) {
                 branch
             );
 
+
         return colors[
             index % colors.length
         ];
@@ -322,18 +332,24 @@ function branchColor(node) {
 function nodeWidth(d) {
 
     if (d.depth === 0) {
-        return 330;
+
+        return 300;
     }
+
 
     if (d.depth === 1) {
-        return 280;
+
+        return 270;
     }
+
 
     if (d.depth === 2) {
-        return 235;
+
+        return 225;
     }
 
-    return 205;
+
+    return 200;
 }
 
 
@@ -344,18 +360,99 @@ function nodeWidth(d) {
 function nodeHeight(d) {
 
     if (d.depth === 0) {
-        return 115;
+
+        return 110;
     }
 
+
     if (d.depth === 1) {
+
         return 72;
     }
 
+
     if (d.depth === 2) {
+
         return 58;
     }
 
+
     return 48;
+}
+
+
+/* =========================================================
+   HORIZONTAL POSITIONS
+========================================================= */
+
+function nodeXPosition(depth) {
+
+    /*
+       D3's "y" represents horizontal position.
+
+       These distances are deliberately generous so
+       cards cannot overlap horizontally.
+    */
+
+    if (depth === 0) {
+
+        return 0;
+    }
+
+
+    if (depth === 1) {
+
+        return 350;
+    }
+
+
+    if (depth === 2) {
+
+        return 650;
+    }
+
+
+    if (depth === 3) {
+
+        return 930;
+    }
+
+
+    return (
+        930 +
+        (
+            depth - 3
+        ) *
+        250
+    );
+}
+
+
+/* =========================================================
+   VERTICAL SPACING
+========================================================= */
+
+function verticalGap(depth) {
+
+    if (depth === 0) {
+
+        return 70;
+    }
+
+
+    if (depth === 1) {
+
+        return 55;
+    }
+
+
+    if (depth === 2) {
+
+        return 38;
+    }
+
+
+    return 28;
 }
 
 
@@ -374,10 +471,12 @@ function wrapNodeText(
             const text =
                 d3.select(this);
 
+
             const words =
                 d.data.title
                     .split(/\s+/)
                     .reverse();
+
 
             let word;
 
@@ -390,17 +489,23 @@ function wrapNodeText(
                         ? 19
                         : 16;
 
-            const lines = [];
+
+            const lines =
+                [];
 
 
             while (
                 (word = words.pop())
             ) {
 
-                line.push(word);
+                line.push(
+                    word
+                );
+
 
                 const test =
                     line.join(" ");
+
 
                 const estimatedWidth =
                     test.length *
@@ -420,9 +525,11 @@ function wrapNodeText(
 
                     line.pop();
 
+
                     lines.push(
                         line.join(" ")
                     );
+
 
                     line = [
                         word
@@ -446,7 +553,9 @@ function wrapNodeText(
                 lineHeight;
 
 
-            text.text(null);
+            text.text(
+                null
+            );
 
 
             lines.forEach(
@@ -457,16 +566,19 @@ function wrapNodeText(
 
                     text
                         .append("tspan")
+
                         .attr(
                             "x",
                             0
                         )
+
                         .attr(
                             "dy",
                             index === 0
                                 ? `${-totalHeight / 2}px`
                                 : `${lineHeight}px`
                         )
+
                         .text(
                             lineText
                         );
@@ -478,88 +590,223 @@ function wrapNodeText(
 
 
 /* =========================================================
-   STRUCTURED LAYOUT
+   SUBTREE SIZE CALCULATION
 ========================================================= */
 
 /*
-   This is the important change in Version 6.
+   This is the main new layout engine.
 
-   We still use D3 to calculate the natural tree structure,
-   but we then give each depth its own horizontal position.
+   Instead of saying:
 
-   Root
-       0
+       "Every node is 115px apart"
 
-   Primary
-       250
+   we calculate:
 
-   Secondary
-       535
+       "How much vertical space does this entire
+        branch require?"
 
-   Detail
-       800
-
-   This means moving a primary branch does NOT squeeze
-   its secondary branches against it.
+   A branch with many children therefore gets more
+   room automatically.
 */
 
-function applyStructuredLayout(root) {
+function calculateSubtreeHeight(
+    node
+) {
 
-    if (!root) {
-        return;
+    const ownHeight =
+        nodeHeight(node);
+
+
+    /*
+       If this node is collapsed, its subtree is
+       just the node itself.
+    */
+
+    if (
+        node.data.collapsed ||
+        !node.children ||
+        node.children.length === 0
+    ) {
+
+        node._subtreeHeight =
+            ownHeight;
+
+        return ownHeight;
     }
 
 
-    /* =====================================================
-       HORIZONTAL DEPTH POSITIONS
-    ===================================================== */
-
-    const depthPositions = {
-
-        0: 0,
-
-        1: 250,
-
-        2: 535,
-
-        3: 800,
-
-        4: 1045,
-
-        5: 1280
-    };
+    let childrenHeight =
+        0;
 
 
-    root.each(
-        function (d) {
+    node.children.forEach(
+        function (child) {
 
-            if (
-                depthPositions[
-                    d.depth
-                ] !== undefined
-            ) {
-
-                d.y =
-                    depthPositions[
-                        d.depth
-                    ];
-            }
-            else {
-
-                d.y =
-                    1280 +
-                    (
-                        d.depth - 5
-                    ) *
-                    235;
-            }
+            childrenHeight +=
+                calculateSubtreeHeight(
+                    child
+                );
         }
     );
 
 
-    /* =====================================================
-       PRIMARY BRANCH POSITIONS
-    ===================================================== */
+    const gaps =
+        (
+            node.children.length - 1
+        ) *
+        verticalGap(
+            node.depth
+        );
+
+
+    childrenHeight +=
+        gaps;
+
+
+    node._subtreeHeight =
+        Math.max(
+            ownHeight,
+            childrenHeight
+        );
+
+
+    return node._subtreeHeight;
+}
+
+
+/* =========================================================
+   SUBTREE POSITIONING
+========================================================= */
+
+function positionSubtree(
+    node,
+    centreY
+) {
+
+    /*
+       The node itself is placed at centreY.
+    */
+
+    node.x =
+        centreY;
+
+
+    node.y =
+        nodeXPosition(
+            node.depth
+        );
+
+
+    if (
+        node.data.collapsed ||
+        !node.children ||
+        node.children.length === 0
+    ) {
+
+        return;
+    }
+
+
+    /* ---------------------------------------------
+       Total required height of children
+    --------------------------------------------- */
+
+    let totalChildrenHeight =
+        0;
+
+
+    node.children.forEach(
+        function (child) {
+
+            totalChildrenHeight +=
+                child._subtreeHeight;
+        }
+    );
+
+
+    totalChildrenHeight +=
+        (
+            node.children.length - 1
+        ) *
+        verticalGap(
+            node.depth
+        );
+
+
+    /*
+       Start the first child so the complete group
+       is centred around the parent.
+    */
+
+    let cursor =
+        centreY -
+        totalChildrenHeight /
+        2;
+
+
+    node.children.forEach(
+        function (child) {
+
+            const childCentre =
+                cursor +
+                child._subtreeHeight /
+                2;
+
+
+            positionSubtree(
+                child,
+                childCentre
+            );
+
+
+            cursor +=
+                child._subtreeHeight +
+                verticalGap(
+                    node.depth
+                );
+        }
+    );
+}
+
+
+/* =========================================================
+   ROOT / PRIMARY BRANCH LAYOUT
+========================================================= */
+
+/*
+   The normal recursive layout above is good for the
+   interior of a branch.
+
+   The root needs special treatment.
+
+   We want:
+
+        ROOT
+          \
+           PRIMARY
+              \
+               SECONDARY
+                    \
+                     DETAILS
+
+   and NOT the primary cards sitting on top of ROOT.
+*/
+
+function createStructuredLayout(
+    root
+) {
+
+    calculateSubtreeHeight(
+        root
+    );
+
+
+    root.x =
+        0;
+
+    root.y =
+        nodeXPosition(0);
+
 
     if (
         !root.children ||
@@ -570,241 +817,190 @@ function applyStructuredLayout(root) {
     }
 
 
-    const primaryBranches =
+    const children =
         root.children;
 
 
-    /*
-       We want the primary branches to sit around
-       the root rather than being stretched from
-       the top to the bottom of the map.
-    */
-
-    const primarySpacing =
-        150;
+    let totalHeight =
+        0;
 
 
-    const primaryCentre =
-        (
-            primaryBranches.length - 1
-        ) / 2;
+    children.forEach(
+        function (child) {
 
-
-    primaryBranches.forEach(
-        function (
-            branch,
-            index
-        ) {
-
-            const desiredX =
-                (
-                    index -
-                    primaryCentre
-                ) *
-                primarySpacing;
-
-
-            const shift =
-                desiredX -
-                branch.x;
-
-
-            /*
-               Move the entire branch together.
-
-               This preserves the internal structure
-               calculated by D3.
-            */
-
-            branch.each(
-                function (d) {
-
-                    d.x +=
-                        shift;
-                }
-            );
+            totalHeight +=
+                child._subtreeHeight;
         }
     );
 
 
-    /* =====================================================
-       SECONDARY BRANCH BREATHING ROOM
-    ===================================================== */
+    totalHeight +=
+        (
+            children.length - 1
+        ) *
+        verticalGap(0);
 
-    primaryBranches.forEach(
-        function (branch) {
+
+    /*
+       Centre all primary branches around
+       the root.
+    */
+
+    let cursor =
+        -
+        totalHeight /
+        2;
+
+
+    children.forEach(
+        function (child) {
+
+            const centre =
+                cursor +
+                child._subtreeHeight /
+                2;
+
+
+            positionSubtree(
+                child,
+                centre
+            );
+
+
+            cursor +=
+                child._subtreeHeight +
+                verticalGap(0);
+        }
+    );
+
+
+    /*
+       The first-level branches should never be
+       allowed to overlap the root vertically.
+
+       If necessary, move the entire primary branch
+       down/up as a complete unit.
+    */
+
+    const minimumRootGap =
+        35;
+
+
+    children.forEach(
+        function (child) {
+
+            const rootHalf =
+                nodeHeight(root) /
+                2;
+
+
+            const childHalf =
+                nodeHeight(child) /
+                2;
+
+
+            const distance =
+                Math.abs(
+                    child.x -
+                    root.x
+                );
+
+
+            const minimumDistance =
+                rootHalf +
+                childHalf +
+                minimumRootGap;
+
 
             if (
-                !branch.children ||
-                branch.children.length < 2
+                distance <
+                minimumDistance
             ) {
 
-                return;
+                const direction =
+                    child.x >= root.x
+                        ? 1
+                        : -1;
+
+
+                const adjustment =
+                    (
+                        minimumDistance -
+                        distance
+                    ) *
+                    direction;
+
+
+                child.each(
+                    function (d) {
+
+                        d.x +=
+                            adjustment;
+                    }
+                );
             }
-
-
-            const secondaryChildren =
-                branch.children;
-
-
-            const secondarySpacing =
-                90;
-
-
-            const secondaryCentre =
-                (
-                    secondaryChildren.length - 1
-                ) / 2;
-
-
-            secondaryChildren.forEach(
-                function (
-                    child,
-                    index
-                ) {
-
-                    const desiredX =
-                        branch.x +
-                        (
-                            index -
-                            secondaryCentre
-                        ) *
-                        secondarySpacing;
-
-
-                    const shift =
-                        desiredX -
-                        child.x;
-
-
-                    child.each(
-                        function (d) {
-
-                            d.x +=
-                                shift;
-                        }
-                    );
-                }
-            );
-        }
-    );
-
-
-    /* =====================================================
-       COLLISION CHECK
-    ===================================================== */
-
-    const visibleNodes =
-        root.descendants();
-
-
-    /*
-       Sort by vertical position.
-    */
-
-    visibleNodes.sort(
-        function (a, b) {
-
-            return a.x - b.x;
         }
     );
 
 
     /*
-       Prevent cards at the same depth from
-       physically overlapping.
+       Recalculate the visual centre of the
+       primary group.
+
+       We do this without moving the root.
     */
 
-    for (
-        let i = 1;
-        i < visibleNodes.length;
-        i++
-    ) {
-
-        const previous =
-            visibleNodes[i - 1];
-
-        const current =
-            visibleNodes[i];
-
-
-        if (
-            previous.depth !==
-            current.depth
-        ) {
-
-            continue;
-        }
-
-
-        const minimumGap =
-            (
-                nodeHeight(previous) +
-                nodeHeight(current)
-            ) /
-            2 +
-            24;
-
-
-        const actualGap =
-            current.x -
-            previous.x;
-
-
-        if (
-            actualGap <
-            minimumGap
-        ) {
-
-            const adjustment =
-                minimumGap -
-                actualGap;
-
-
-            /*
-               Move this node and everything
-               below it together.
-            */
-
-            current.each(
+    const top =
+        Math.min(
+            ...children.map(
                 function (d) {
 
-                    d.x +=
-                        adjustment;
+                    return (
+                        d.x -
+                        d._subtreeHeight /
+                        2
+                    );
                 }
-            );
-        }
-    }
+            )
+        );
 
 
-    /* =====================================================
-       RE-CENTRE PRIMARY GROUP
-    ===================================================== */
+    const bottom =
+        Math.max(
+            ...children.map(
+                function (d) {
 
-    const firstPrimary =
-        primaryBranches[0];
-
-    const lastPrimary =
-        primaryBranches[
-            primaryBranches.length - 1
-        ];
+                    return (
+                        d.x +
+                        d._subtreeHeight /
+                        2
+                    );
+                }
+            )
+        );
 
 
     const groupCentre =
         (
-            firstPrimary.x +
-            lastPrimary.x
+            top +
+            bottom
         ) / 2;
 
+
+    /*
+       Only make a small correction.
+
+       The root remains at EXACTLY x = 0.
+    */
 
     const correction =
         -groupCentre;
 
 
-    primaryBranches.forEach(
-        function (branch) {
+    children.forEach(
+        function (child) {
 
-            branch.each(
+            child.each(
                 function (d) {
 
                     d.x +=
@@ -817,7 +1013,53 @@ function applyStructuredLayout(root) {
 
 
 /* =========================================================
-   RENDER
+   LINK PATH
+========================================================= */
+
+function createLinkPath(d) {
+
+    const sourceRight =
+        d.source.y +
+        nodeWidth(
+            d.source
+        ) /
+        2;
+
+
+    const targetLeft =
+        d.target.y -
+        nodeWidth(
+            d.target
+        ) /
+        2;
+
+
+    const x1 =
+        sourceRight;
+
+
+    const x2 =
+        targetLeft;
+
+
+    const middle =
+        (
+            x1 +
+            x2
+        ) / 2;
+
+
+    return `
+        M ${x1},${d.source.x}
+        C ${middle},${d.source.x}
+          ${middle},${d.target.x}
+          ${x2},${d.target.x}
+    `;
+}
+
+
+/* =========================================================
+   RENDER MIND MAP
 ========================================================= */
 
 function renderMindMap(
@@ -826,10 +1068,7 @@ function renderMindMap(
 ) {
 
     /*
-       Preserve the current camera.
-
-       Expanding or collapsing a branch should NOT
-       automatically zoom the user back to Fit Map.
+       Preserve the camera when expanding/collapsing.
     */
 
     const previousTransform =
@@ -843,12 +1082,18 @@ function renderMindMap(
 
 
     if (!tree) {
+
         return;
     }
 
 
+    /* =====================================================
+       CONTAINER
+    ===================================================== */
+
     const container =
-        svg.append("g")
+        svg
+            .append("g")
             .attr(
                 "class",
                 "map-container"
@@ -884,19 +1129,6 @@ function renderMindMap(
     );
 
 
-    /*
-       Restore camera after expansion/collapse.
-    */
-
-    if (!fitAfterRender) {
-
-        svg.call(
-            zoomBehaviour.transform,
-            previousTransform
-        );
-    }
-
-
     /* =====================================================
        HIERARCHY
     ===================================================== */
@@ -913,50 +1145,17 @@ function renderMindMap(
                     return null;
                 }
 
+
                 return node.children;
             }
         );
 
 
     /* =====================================================
-       BASE D3 TREE
+       STRUCTURED LAYOUT
     ===================================================== */
 
-    const layout =
-        d3.tree()
-            .nodeSize([
-                115,
-                300
-            ]);
-
-
-    layout(root);
-
-
-    /* =====================================================
-       ROOT ANCHOR
-    ===================================================== */
-
-    const originalRootX =
-        root.x;
-
-
-    root.each(
-        function (d) {
-
-            d.x =
-                d.x -
-                originalRootX;
-        }
-    );
-
-
-    /*
-       Now replace the generic D3 depth positioning
-       with our structured mind-map layout.
-    */
-
-    applyStructuredLayout(
+    createStructuredLayout(
         root
     );
 
@@ -975,10 +1174,13 @@ function renderMindMap(
 
 
     linkGroup
+
         .selectAll("path")
+
         .data(
             root.links()
         )
+
         .join("path")
 
         .attr(
@@ -1003,6 +1205,7 @@ function renderMindMap(
                         d.target
                     );
                 }
+
 
                 return "#c4c7ca";
             }
@@ -1039,39 +1242,7 @@ function renderMindMap(
 
         .attr(
             "d",
-            function (d) {
-
-                const sourceRight =
-                    d.source.y +
-                    nodeWidth(d.source) / 2;
-
-
-                const targetLeft =
-                    d.target.y -
-                    nodeWidth(d.target) / 2;
-
-
-                const x1 =
-                    sourceRight;
-
-                const x2 =
-                    targetLeft;
-
-
-                const middle =
-                    (
-                        x1 +
-                        x2
-                    ) / 2;
-
-
-                return `
-                    M ${x1},${d.source.x}
-                    C ${middle},${d.source.x}
-                      ${middle},${d.target.x}
-                      ${x2},${d.target.x}
-                `;
-            }
+            createLinkPath
         );
 
 
@@ -1271,7 +1442,7 @@ function renderMindMap(
 
 
     /* =====================================================
-       COLOURED PRIMARY ACCENT
+       PRIMARY COLOUR ACCENT
     ===================================================== */
 
     nodes
@@ -1458,7 +1629,7 @@ function renderMindMap(
 
 
     /* =====================================================
-       EXPAND / COLLAPSE
+       EXPANDABLE NODES
     ===================================================== */
 
     const expandable =
@@ -1474,7 +1645,7 @@ function renderMindMap(
 
 
     /* =====================================================
-       CONTROL CIRCLE
+       EXPAND CIRCLE
     ===================================================== */
 
     expandable
@@ -1630,13 +1801,17 @@ function renderMindMap(
             );
 
 
+        const clipId =
+            "root-image-clip";
+
+
         rootNode
 
             .append("clipPath")
 
             .attr(
                 "id",
-                "root-image-clip"
+                clipId
             )
 
             .append("rect")
@@ -1722,7 +1897,7 @@ function renderMindMap(
 
             .attr(
                 "clip-path",
-                "url(#root-image-clip)"
+                `url(#${clipId})`
             );
     }
 
@@ -1754,6 +1929,19 @@ function renderMindMap(
 
 
     /* =====================================================
+       RESTORE CAMERA
+    ===================================================== */
+
+    if (!fitAfterRender) {
+
+        svg.call(
+            zoomBehaviour.transform,
+            previousTransform
+        );
+    }
+
+
+    /* =====================================================
        INITIAL FIT
     ===================================================== */
 
@@ -1780,6 +1968,7 @@ function renderMindMap(
 function fitMap() {
 
     if (!root) {
+
         return;
     }
 
@@ -1801,6 +1990,7 @@ function fitMap() {
     const width =
         svg.node().clientWidth;
 
+
     const height =
         svg.node().clientHeight;
 
@@ -1812,37 +2002,49 @@ function fitMap() {
 
 
     /*
-       The root is always the visual anchor.
+       The root is always the anchor.
+
+       We deliberately do NOT centre the complete
+       bounding box because that makes the root
+       jump around.
     */
 
     const rootX =
         root.y;
 
 
-    const horizontalSpace =
-        bounds.width +
-        160;
+    const leftSpace =
+        rootX -
+        bounds.x;
 
 
-    const verticalSpace =
-        bounds.height +
-        120;
+    const rightSpace =
+        bounds.x +
+        bounds.width -
+        rootX;
 
 
     const horizontalScale =
         (
             width *
-            0.88
+            0.90
         ) /
-        horizontalSpace;
+        (
+            leftSpace +
+            rightSpace +
+            100
+        );
 
 
     const verticalScale =
         (
             height *
-            0.88
+            0.90
         ) /
-        verticalSpace;
+        (
+            bounds.height +
+            80
+        );
 
 
     let scale =
@@ -1867,12 +2069,12 @@ function fitMap() {
 
 
     /*
-       Put root around 27% from the left.
+       Root sits about 25% from the left.
     */
 
     const desiredRootX =
         width *
-        0.27;
+        0.25;
 
 
     const desiredRootY =
@@ -1926,6 +2128,7 @@ document
         function () {
 
             if (!zoomBehaviour) {
+
                 return;
             }
 
@@ -1952,6 +2155,7 @@ document
         function () {
 
             if (!zoomBehaviour) {
+
                 return;
             }
 
