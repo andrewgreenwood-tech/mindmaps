@@ -274,7 +274,7 @@ function branchColor(node) {
    RENDER MIND MAP
 ========================================================= */
 
-function renderMindMap(tree) {
+function renderMindMap(tree, fitAfterRender = false) {
 
     svg.selectAll("*").remove();
 
@@ -753,9 +753,9 @@ function renderMindMap(tree) {
                 !d.data.collapsed;
 
 
-            /* Re-render */
+            /* Re-render without changing zoom */
 
-            renderMindMap(tree);
+            renderMindMap(tree, false);
         }
     );
 
@@ -764,10 +764,12 @@ function renderMindMap(tree) {
        FIT
     ================================================= */
 
+   if (fitAfterRender) {
     setTimeout(
         fitMap,
         50
     );
+}
 }
 
 
@@ -939,6 +941,6 @@ generateButton.addEventListener(
         );
 
 
-        renderMindMap(tree);
+        renderMindMap(tree true);
     }
 );
