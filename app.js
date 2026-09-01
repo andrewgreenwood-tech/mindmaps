@@ -1,6 +1,6 @@
 /* =========================================================
-   BEAUTIFUL MIND MAP GENERATOR
-   Version 2 — Expand / Collapse
+   MIND MAP GENERATOR
+   Version 3 — Real Expand / Collapse
 ========================================================= */
 
 
@@ -121,9 +121,9 @@ function parseMarkdown(markdown) {
 
             const node = {
 
-                title,
+                title: title,
 
-                level,
+                level: level,
 
                 type: "heading",
 
@@ -141,7 +141,6 @@ function parseMarkdown(markdown) {
             if (level === 1 || !root) {
 
                 if (!root) {
-
                     root = node;
                 }
 
@@ -154,7 +153,7 @@ function parseMarkdown(markdown) {
 
 
             /* -----------------------------------------
-               Find correct parent
+               Find parent
             ----------------------------------------- */
 
             while (
@@ -192,13 +191,9 @@ function parseMarkdown(markdown) {
 
         if (bulletMatch) {
 
-            const title =
-                bulletMatch[1].trim();
-
-
             const node = {
 
-                title,
+                title: bulletMatch[1].trim(),
 
                 level: null,
 
@@ -228,45 +223,7 @@ function parseMarkdown(markdown) {
 
 
 /* =========================================================
-   GET VISIBLE NODES
-========================================================= */
-
-function getVisibleNodes(rootNode) {
-
-    const visible = [];
-
-
-    function visit(node) {
-
-        visible.push(node);
-
-
-        if (node.collapsed) {
-
-            return;
-        }
-
-
-        if (node.children) {
-
-            node.children.forEach(child => {
-
-                visit(child);
-
-            });
-        }
-    }
-
-
-    visit(rootNode);
-
-
-    return visible;
-}
-
-
-/* =========================================================
-   BRANCH COLORS
+   BRANCH COLOR
 ========================================================= */
 
 function branchColor(node) {
@@ -335,7 +292,7 @@ function renderMindMap(tree) {
 
 
     /* ---------------------------------------------
-       SVG container
+       Main container
     --------------------------------------------- */
 
     const container =
@@ -365,12 +322,23 @@ function renderMindMap(tree) {
     svg.call(zoomBehaviour);
 
 
-    /* ---------------------------------------------
-       D3 hierarchy
-    --------------------------------------------- */
+    /* =================================================
+       IMPORTANT:
+       D3 only creates children when the node is open.
+    ================================================= */
 
     root =
-        d3.hierarchy(tree);
+        d3.hierarchy(
+            tree,
+            node => {
+
+                if (node.collapsed) {
+                    return null;
+                }
+
+                return node.children;
+            }
+        );
 
 
     /* ---------------------------------------------
@@ -384,10 +352,6 @@ function renderMindMap(tree) {
 
     layout(root);
 
-
-    /* ---------------------------------------------
-       Position
-    --------------------------------------------- */
 
     const xOffset =
         width / 2;
@@ -406,49 +370,55 @@ function renderMindMap(tree) {
             .attr("class", "links");
 
 
-    const links =
-        linkGroup
-            .selectAll("path")
-            .data(root.links())
-            .join("path")
-            .attr("fill", "none")
-            .attr(
-                "stroke",
-                d => {
+    linkGroup
+        .selectAll("path")
+        .data(root.links())
+        .join("path")
 
-                    if (d.target.depth === 1) {
+        .attr(
+            "fill",
+            "none"
+        )
 
-                        return branchColor(d.target);
-                    }
+        .attr(
+            "stroke",
+            d => {
 
-                    return "#b8b8b8";
+                if (d.target.depth === 1) {
+                    return branchColor(d.target);
                 }
-            )
-            .attr(
-                "stroke-width",
-                d => {
 
-                    if (d.target.depth === 1) {
-                        return 4;
-                    }
+                return "#b8b8b8";
+            }
+        )
 
-                    if (d.target.depth === 2) {
-                        return 2.5;
-                    }
+        .attr(
+            "stroke-width",
+            d => {
 
-                    return 1.5;
+                if (d.target.depth === 1) {
+                    return 4;
                 }
-            )
-            .attr(
-                "stroke-linecap",
-                "round"
-            )
-            .attr(
-                "d",
-                d3.linkHorizontal()
-                    .x(d => d.y + xOffset)
-                    .y(d => d.x + yOffset)
-            );
+
+                if (d.target.depth === 2) {
+                    return 2.5;
+                }
+
+                return 1.5;
+            }
+        )
+
+        .attr(
+            "stroke-linecap",
+            "round"
+        )
+
+        .attr(
+            "d",
+            d3.linkHorizontal()
+                .x(d => d.y + xOffset)
+                .y(d => d.x + yOffset)
+        );
 
 
     /* =================================================
@@ -466,10 +436,12 @@ function renderMindMap(tree) {
             .selectAll("g")
             .data(root.descendants())
             .join("g")
+
             .attr(
                 "class",
                 "mind-node"
             )
+
             .attr(
                 "transform",
                 d =>
@@ -480,12 +452,13 @@ function renderMindMap(tree) {
             );
 
 
-    /* ---------------------------------------------
-       Node circle
-    --------------------------------------------- */
+    /* =================================================
+       NODE CIRCLE
+    ================================================= */
 
     nodes
         .append("circle")
+
         .attr(
             "r",
             d => {
@@ -501,6 +474,7 @@ function renderMindMap(tree) {
                 return 5;
             }
         )
+
         .attr(
             "fill",
             d => {
@@ -516,10 +490,12 @@ function renderMindMap(tree) {
                 return "#777";
             }
         )
+
         .attr(
             "stroke",
             "white"
         )
+
         .attr(
             "stroke-width",
             2
@@ -527,83 +503,109 @@ function renderMindMap(tree) {
 
 
     /* =================================================
-       EXPAND / COLLAPSE BUTTON
+       EXPAND / COLLAPSE CONTROL
     ================================================= */
 
     const expandable =
         nodes.filter(
             d =>
-                d.children &&
-                d.children.length > 0
+                d.data.children &&
+                d.data.children.length > 0
         );
 
 
+    /* ---------------------------------------------
+       Control circle
+    --------------------------------------------- */
+
     expandable
+
         .append("circle")
+
         .attr(
             "class",
             "expand-button"
         )
+
         .attr(
             "cx",
             0
         )
+
         .attr(
             "cy",
             0
         )
+
         .attr(
             "r",
             13
         )
+
         .attr(
             "fill",
             "white"
         )
+
         .attr(
             "stroke",
             d => branchColor(d)
         )
+
         .attr(
             "stroke-width",
             2
         );
 
 
+    /* ---------------------------------------------
+       Plus / minus symbol
+    --------------------------------------------- */
+
     expandable
+
         .append("text")
+
         .attr(
             "class",
             "expand-symbol"
         )
+
         .attr(
             "x",
             0
         )
+
         .attr(
             "y",
             1
         )
+
         .attr(
             "text-anchor",
             "middle"
         )
+
         .attr(
             "dominant-baseline",
             "middle"
         )
+
         .attr(
             "font-size",
             "13px"
         )
+
         .attr(
             "font-weight",
             "700"
         )
+
         .attr(
             "fill",
             d => branchColor(d)
         )
+
         .text(
             d =>
                 d.data.collapsed
@@ -613,11 +615,13 @@ function renderMindMap(tree) {
 
 
     /* =================================================
-       NODE TEXT
+       TEXT
     ================================================= */
 
     nodes
+
         .append("text")
+
         .attr(
             "class",
             d => {
@@ -635,13 +639,14 @@ function renderMindMap(tree) {
                 return "node-title";
             }
         )
+
         .attr(
             "x",
             d => {
 
                 if (
-                    d.children &&
-                    d.children.length > 0
+                    d.data.children &&
+                    d.data.children.length > 0
                 ) {
 
                     return 24;
@@ -650,10 +655,12 @@ function renderMindMap(tree) {
                 return 17;
             }
         )
+
         .attr(
             "dy",
             "0.35em"
         )
+
         .attr(
             "font-size",
             d => {
@@ -673,6 +680,7 @@ function renderMindMap(tree) {
                 return "12px";
             }
         )
+
         .text(
             d =>
                 d.data.title
@@ -693,27 +701,34 @@ function renderMindMap(tree) {
 
 
         rootNode
+
             .append("image")
+
             .attr(
                 "href",
                 currentImage
             )
+
             .attr(
                 "x",
                 -75
             )
+
             .attr(
                 "y",
                 -105
             )
+
             .attr(
                 "width",
                 150
             )
+
             .attr(
                 "height",
                 75
             )
+
             .attr(
                 "preserveAspectRatio",
                 "xMidYMid slice"
@@ -722,7 +737,7 @@ function renderMindMap(tree) {
 
 
     /* =================================================
-       CLICK HANDLER
+       CLICK TO EXPAND / COLLAPSE
     ================================================= */
 
     expandable.on(
@@ -732,25 +747,15 @@ function renderMindMap(tree) {
             event.stopPropagation();
 
 
-            /*
-             * Toggle state
-             */
+            /* Toggle the actual data node */
 
             d.data.collapsed =
                 !d.data.collapsed;
 
 
-            /*
-             * Re-render
-             */
+            /* Re-render */
 
             renderMindMap(tree);
-
-
-            /*
-             * Keep current zoom where possible
-             */
-
         }
     );
 
@@ -761,7 +766,7 @@ function renderMindMap(tree) {
 
     setTimeout(
         fitMap,
-        100
+        50
     );
 }
 
@@ -834,27 +839,24 @@ function fitMap() {
 
 
     svg.transition()
-        .duration(500)
+
+        .duration(400)
+
         .call(
-
             zoomBehaviour.transform,
-
             d3.zoomIdentity
                 .translate(x, y)
                 .scale(scale)
-
         );
 }
 
 
 /* =========================================================
-   ZOOM CONTROLS
+   ZOOM BUTTONS
 ========================================================= */
 
 document
-    .getElementById(
-        "zoomInButton"
-    )
+    .getElementById("zoomInButton")
     .addEventListener(
         "click",
         () => {
@@ -864,15 +866,12 @@ document
                     zoomBehaviour.scaleBy,
                     1.25
                 );
-
         }
     );
 
 
 document
-    .getElementById(
-        "zoomOutButton"
-    )
+    .getElementById("zoomOutButton")
     .addEventListener(
         "click",
         () => {
@@ -882,15 +881,12 @@ document
                     zoomBehaviour.scaleBy,
                     0.8
                 );
-
         }
     );
 
 
 document
-    .getElementById(
-        "fitButton"
-    )
+    .getElementById("fitButton")
     .addEventListener(
         "click",
         fitMap
@@ -898,7 +894,7 @@ document
 
 
 /* =========================================================
-   GENERATE
+   GENERATE BUTTON
 ========================================================= */
 
 generateButton.addEventListener(
@@ -936,6 +932,7 @@ generateButton.addEventListener(
         inputPanel.classList.add(
             "hidden"
         );
+
 
         mapPanel.classList.remove(
             "hidden"
