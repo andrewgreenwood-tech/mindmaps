@@ -488,116 +488,266 @@ svg.call(
 }
 
 /* =========================================================
-LAYOUT
+   LAYOUT
 ========================================================= */
 
 function createLayout() {
 
-/*
-   D3 TREE
+    /*
+       STABLE PRIMARY-BRANCH LAYOUT
 
-   X = vertical position
-   Y = horizontal position
+       The root and primary branches act as fixed anchors.
 
-   We deliberately increase the horizontal
-   separation so the map reads as:
+       Expanding one primary branch therefore does NOT
+       cause the other primary branches to move around.
 
-   ROOT
-      |
-      |------ PRIMARY
-                     |
-                     |------ SECONDARY
-                                      |
-                                      |------ DETAIL
-
-   rather than compressing all levels together.
-*/
+       x = vertical position
+       y = horizontal position
+    */
 
 
-const layout =
-    d3.tree()
-        .nodeSize([
-            105,
-            360
-        ]);
+    /* =====================================================
+       ROOT
+    ===================================================== */
+
+    hierarchyRoot.x = 0;
+    hierarchyRoot.y = 0;
 
 
-layout(
-    hierarchyRoot
-);
-
-
-/* -------------------------------------------------
-   KEEP ROOT AT VERTICAL ZERO
-------------------------------------------------- */
-
-const rootX =
-    hierarchyRoot.x;
-
-
-hierarchyRoot.each(
-    function (d) {
-
-        d.x -= rootX;
+    if (
+        !hierarchyRoot.children ||
+        hierarchyRoot.children.length === 0
+    ) {
+        return;
     }
-);
 
 
-/* -------------------------------------------------
-   KEEP PRIMARY BRANCHES SPACED
-------------------------------------------------- */
+    /* =====================================================
+       PRIMARY BRANCHES
+    ===================================================== */
 
-if (
-    hierarchyRoot.children &&
-    hierarchyRoot.children.length
-) {
-
-    const children =
+    const primaryBranches =
         hierarchyRoot.children;
 
 
-    const minimumGap =
-        115;
+    const primaryCount =
+        primaryBranches.length;
 
 
-    for (
-        let i = 1;
-        i < children.length;
-        i++
-    ) {
+    /*
+       Vertical distance between primary branches.
 
-        const previous =
-            children[i - 1];
+       We deliberately keep this independent from
+       the number of children underneath each branch.
+    */
 
-        const current =
-            children[i];
+    const PRIMARY_GAP = 180;
 
 
-        const gap =
-            current.x -
-            previous.x;
+    const primaryMiddle =
+        (primaryCount - 1) / 2;
 
 
-        if (
-            gap < minimumGap
-        ) {
+    primaryBranches.forEach(
+        function (primary, index) {
 
-            const adjustment =
-                minimumGap -
-                gap;
+            primary.x =
+                (
+                    index -
+                    primaryMiddle
+                ) *
+                PRIMARY_GAP;
 
 
-            current.each(
-                function (d) {
+            /*
+               Horizontal position of primary nodes.
+            */
 
-                    d.x +=
-                        adjustment;
+            primary.y = 360;
+        }
+    );
+
+
+    /* =====================================================
+       SECONDARY BRANCHES
+    ===================================================== */
+
+    primaryBranches.forEach(
+        function (primary) {
+
+            if (
+                primary.data.collapsed ||
+                !primary.children ||
+                primary.children.length === 0
+            ) {
+                return;
+            }
+
+
+            const secondaryBranches =
+                primary.children;
+
+
+            const secondaryCount =
+                secondaryBranches.length;
+
+
+            /*
+               Spread secondary nodes around the
+               primary branch rather than allowing
+               the entire tree to determine their
+               position.
+            */
+
+            const SECONDARY_GAP = 95;
+
+
+            const secondaryMiddle =
+                (secondaryCount - 1) / 2;
+
+
+            secondaryBranches.forEach(
+                function (
+                    secondary,
+                    index
+                ) {
+
+                    secondary.x =
+                        primary.x +
+                        (
+                            index -
+                            secondaryMiddle
+                        ) *
+                        SECONDARY_GAP;
+
+
+                    secondary.y =
+                        680;
+
+
+                    /* =================================
+                       DETAIL NODES
+                    ================================= */
+
+                    if (
+                        secondary.data.collapsed ||
+                        !secondary.children ||
+                        secondary.children.length === 0
+                    ) {
+                        return;
+                    }
+
+
+                    const detailNodes =
+                        secondary.children;
+
+
+                    const detailCount =
+                        detailNodes.length;
+
+
+                    const DETAIL_GAP = 65;
+
+
+                    const detailMiddle =
+                        (detailCount - 1) / 2;
+
+
+                    detailNodes.forEach(
+                        function (
+                            detail,
+                            detailIndex
+                        ) {
+
+                            detail.x =
+                                secondary.x +
+                                (
+                                    detailIndex -
+                                    detailMiddle
+                                ) *
+                                DETAIL_GAP;
+
+
+                            detail.y =
+                                980;
+
+
+                            /*
+                               Handle any additional
+                               levels beneath detail.
+                            */
+
+                            positionChildLevels(
+                                detail,
+                                1250,
+                                55
+                            );
+                        }
+                    );
                 }
             );
         }
-    }
+    );
 }
 
+
+/* =========================================================
+   DEEPER CHILD LEVELS
+========================================================= */
+
+function positionChildLevels(
+    node,
+    nextY,
+    xGap
+) {
+
+    if (
+        !node.children ||
+        node.children.length === 0 ||
+        node.data.collapsed
+    ) {
+        return;
+    }
+
+
+    const children =
+        node.children;
+
+
+    const count =
+        children.length;
+
+
+    const middle =
+        (count - 1) / 2;
+
+
+    children.forEach(
+        function (
+            child,
+            index
+        ) {
+
+            child.x =
+                node.x +
+                (
+                    index -
+                    middle
+                ) *
+                xGap;
+
+
+            child.y =
+                nextY;
+
+
+            positionChildLevels(
+                child,
+                nextY + 270,
+                xGap
+            );
+        }
+    );
 }
 
 /* =========================================================
