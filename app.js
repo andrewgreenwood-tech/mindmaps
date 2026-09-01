@@ -1,12 +1,12 @@
 /* =========================================================
    MIND MAP GENERATOR
-   Version 3 — Real Expand / Collapse
+   Version 4 — Stable Expand / Collapse + Improved Layout
 ========================================================= */
 
 
-/* ---------------------------------------------------------
+/* =========================================================
    DOM
---------------------------------------------------------- */
+========================================================= */
 
 const markdownInput =
     document.getElementById("markdownInput");
@@ -30,12 +30,14 @@ const svg =
     d3.select("#mindMap");
 
 
-/* ---------------------------------------------------------
+/* =========================================================
    STATE
---------------------------------------------------------- */
+========================================================= */
 
 let root = null;
+
 let zoomBehaviour = null;
+
 let currentImage = null;
 
 
@@ -43,35 +45,48 @@ let currentImage = null;
    IMAGE HANDLING
 ========================================================= */
 
-imageInput.addEventListener("change", function () {
+imageInput.addEventListener(
+    "change",
+    function () {
 
-    const file = this.files[0];
+        const file =
+            this.files[0];
 
-    if (!file) {
+        if (!file) {
 
-        currentImage = null;
+            currentImage = null;
 
-        imagePreview.style.display = "none";
-        imagePreview.innerHTML = "";
+            imagePreview.style.display =
+                "none";
 
-        return;
+            imagePreview.innerHTML =
+                "";
+
+            return;
+        }
+
+
+        const reader =
+            new FileReader();
+
+
+        reader.onload =
+            function (event) {
+
+                currentImage =
+                    event.target.result;
+
+                imagePreview.innerHTML =
+                    `<img src="${currentImage}" alt="Map image">`;
+
+                imagePreview.style.display =
+                    "block";
+            };
+
+
+        reader.readAsDataURL(file);
     }
-
-
-    const reader = new FileReader();
-
-    reader.onload = function (event) {
-
-        currentImage = event.target.result;
-
-        imagePreview.innerHTML =
-            `<img src="${currentImage}" alt="Map image">`;
-
-        imagePreview.style.display = "block";
-    };
-
-    reader.readAsDataURL(file);
-});
+);
 
 
 /* =========================================================
@@ -86,15 +101,23 @@ function parseMarkdown(markdown) {
             .split("\n");
 
 
-    let root = null;
+    let root =
+        null;
 
-    const stack = [];
+
+    const stack =
+        [];
 
 
-    for (let rawLine of lines) {
+    for (
+        let rawLine of lines
+    ) {
 
         const line =
-            rawLine.replace(/\t/g, "    ");
+            rawLine.replace(
+                /\t/g,
+                "    "
+            );
 
 
         if (!line.trim()) {
@@ -102,12 +125,14 @@ function parseMarkdown(markdown) {
         }
 
 
-        /* ---------------------------------------------
+        /* -------------------------------------------------
            Heading
-        --------------------------------------------- */
+        ------------------------------------------------- */
 
         const headingMatch =
-            line.match(/^(#{1,6})\s+(.+)$/);
+            line.match(
+                /^(#{1,6})\s+(.+)$/
+            );
 
 
         if (headingMatch) {
@@ -121,30 +146,39 @@ function parseMarkdown(markdown) {
 
             const node = {
 
-                title: title,
+                title:
+                    title,
 
-                level: level,
+                level:
+                    level,
 
-                type: "heading",
+                type:
+                    "heading",
 
-                children: [],
+                children:
+                    [],
 
-                collapsed: false
+                collapsed:
+                    false
 
             };
 
 
-            /* -----------------------------------------
+            /* ---------------------------------------------
                Root
-            ----------------------------------------- */
+            --------------------------------------------- */
 
-            if (level === 1 || !root) {
+            if (
+                level === 1 ||
+                !root
+            ) {
 
                 if (!root) {
                     root = node;
                 }
 
-                stack.length = 0;
+                stack.length =
+                    0;
 
                 stack.push(node);
 
@@ -152,13 +186,15 @@ function parseMarkdown(markdown) {
             }
 
 
-            /* -----------------------------------------
+            /* ---------------------------------------------
                Find parent
-            ----------------------------------------- */
+            --------------------------------------------- */
 
             while (
                 stack.length > 0 &&
-                stack[stack.length - 1].level >= level
+                stack[
+                    stack.length - 1
+                ].level >= level
             ) {
 
                 stack.pop();
@@ -166,14 +202,20 @@ function parseMarkdown(markdown) {
 
 
             const parent =
-                stack[stack.length - 1];
+                stack[
+                    stack.length - 1
+                ];
 
 
             if (parent) {
 
-                parent.children.push(node);
+                parent.children.push(
+                    node
+                );
 
-                stack.push(node);
+                stack.push(
+                    node
+                );
             }
 
 
@@ -181,38 +223,49 @@ function parseMarkdown(markdown) {
         }
 
 
-        /* ---------------------------------------------
+        /* -------------------------------------------------
            Bullet
-        --------------------------------------------- */
+        ------------------------------------------------- */
 
         const bulletMatch =
-            line.match(/^\s*[-*+]\s+(.+)$/);
+            line.match(
+                /^\s*[-*+]\s+(.+)$/
+            );
 
 
         if (bulletMatch) {
 
             const node = {
 
-                title: bulletMatch[1].trim(),
+                title:
+                    bulletMatch[1].trim(),
 
-                level: null,
+                level:
+                    null,
 
-                type: "detail",
+                type:
+                    "detail",
 
-                children: [],
+                children:
+                    [],
 
-                collapsed: false
+                collapsed:
+                    false
 
             };
 
 
             const parent =
-                stack[stack.length - 1];
+                stack[
+                    stack.length - 1
+                ];
 
 
             if (parent) {
 
-                parent.children.push(node);
+                parent.children.push(
+                    node
+                );
             }
         }
     }
@@ -231,16 +284,22 @@ function branchColor(node) {
     const colors = [
 
         "#3977c9",
+
         "#4f9a5a",
+
         "#d99427",
+
         "#8757a8",
+
         "#c45b5b",
+
         "#328f8f"
 
     ];
 
 
-    let branch = node;
+    let branch =
+        node;
 
 
     while (
@@ -248,7 +307,8 @@ function branchColor(node) {
         branch.parent.depth > 0
     ) {
 
-        branch = branch.parent;
+        branch =
+            branch.parent;
     }
 
 
@@ -258,7 +318,10 @@ function branchColor(node) {
     ) {
 
         const index =
-            branch.parent.children.indexOf(branch);
+            branch.parent.children.indexOf(
+                branch
+            );
+
 
         return colors[
             index % colors.length
@@ -274,9 +337,27 @@ function branchColor(node) {
    RENDER MIND MAP
 ========================================================= */
 
-function renderMindMap(tree, fitAfterRender = false) {
-   const previousTransform =
-        d3.zoomTransform(svg.node());
+function renderMindMap(
+    tree,
+    fitAfterRender = false
+) {
+
+    /*
+       Remember the current camera position.
+
+       This is important when a user expands
+       or collapses a branch.
+    */
+
+    const previousTransform =
+        d3.zoomTransform(
+            svg.node()
+        );
+
+
+    /*
+       Clear the existing SVG contents.
+    */
 
     svg.selectAll("*").remove();
 
@@ -286,145 +367,210 @@ function renderMindMap(tree, fitAfterRender = false) {
     }
 
 
+    /* -----------------------------------------------------
+       SVG dimensions
+    ----------------------------------------------------- */
+
     const width =
         svg.node().clientWidth;
+
 
     const height =
         svg.node().clientHeight;
 
-   const xOffset =
-    width / 2;
 
-   const yOffset =
-       height / 2;
+    /*
+       Coordinate offsets.
+
+       D3's tree uses its own coordinate system.
+       These move the tree into the centre area
+       of the SVG.
+    */
+
+    const xOffset =
+        width / 2;
 
 
-    /* ---------------------------------------------
-       Main container
-    --------------------------------------------- */
+    const yOffset =
+        height / 2;
+
+
+    /* =====================================================
+       MAIN CONTAINER
+    ===================================================== */
 
     const container =
         svg.append("g")
-            .attr("class", "map-container");
+            .attr(
+                "class",
+                "map-container"
+            );
 
 
-    /* ---------------------------------------------
-       Zoom
-    --------------------------------------------- */
+    /* =====================================================
+       ZOOM
+    ===================================================== */
 
     zoomBehaviour =
         d3.zoom()
 
-            .scaleExtent([0.25, 3])
+            .scaleExtent([
+                0.25,
+                3
+            ])
 
-            .on("zoom", event => {
+            .on(
+                "zoom",
+                event => {
 
-                container.attr(
-                    "transform",
-                    event.transform
-                );
+                    container.attr(
+                        "transform",
+                        event.transform
+                    );
 
-            });
-
-
-    svg.call(zoomBehaviour);
-
-   if (!fitAfterRender) {
-       svg.call(
-           zoomBehaviour.transform,
-           previousTransform
-       );
-   }
+                }
+            );
 
 
-    /* =================================================
-       IMPORTANT:
-       D3 only creates children when the node is open.
-    ================================================= */
+    svg.call(
+        zoomBehaviour
+    );
+
+
+    /*
+       When this is an expand/collapse operation,
+       restore the previous camera.
+
+       When generating a completely new map,
+       Fit Map will position it instead.
+    */
+
+    if (!fitAfterRender) {
+
+        svg.call(
+            zoomBehaviour.transform,
+            previousTransform
+        );
+    }
+
+
+    /* =====================================================
+       HIERARCHY
+    ===================================================== */
 
     root =
         d3.hierarchy(
             tree,
             node => {
 
-                if (node.collapsed) {
+                /*
+                   Collapsed nodes have no visible
+                   children in the hierarchy.
+                */
+
+                if (
+                    node.collapsed
+                ) {
+
                     return null;
                 }
+
 
                 return node.children;
             }
         );
 
 
-    /* ---------------------------------------------
-       Tree layout
-    --------------------------------------------- */
+    /* =====================================================
+       TREE LAYOUT
+    ===================================================== */
 
     const layout =
-    d3.tree()
-        .nodeSize([110, 260]);
-
-layout(root);
-
-
-/* ---------------------------------------------
-   Keep the root node anchored
---------------------------------------------- */
-
-const rootX = root.x;
-
-root.each(function(d) {
-    d.x = d.x - rootX;
-});
+        d3.tree()
+            .nodeSize([
+                110,
+                260
+            ]);
 
 
-/* ---------------------------------------------
-   Prevent a major branch from sitting directly
-   on top of the root node
---------------------------------------------- */
+    layout(root);
 
-const minimumRootGap = 70;
 
-root.children?.forEach(function(child) {
+    /* =====================================================
+       KEEP ROOT ANCHORED
+    ===================================================== */
 
-    if (Math.abs(child.x) < minimumRootGap) {
+    const rootX =
+        root.x;
 
-        const shift =
-            child.x >= 0
-                ? minimumRootGap
-                : -minimumRootGap;
 
-        child.each(function(d) {
-            d.x += shift;
-        });
+    root.each(
+        function (d) {
+
+            d.x =
+                d.x - rootX;
+
+        }
+    );
+
+
+    /*
+       Prevent a first-level branch from being
+       placed directly over the root.
+    */
+
+    const minimumRootGap =
+        70;
+
+
+    if (root.children) {
+
+        root.children.forEach(
+            function (child) {
+
+                if (
+                    Math.abs(child.x) <
+                    minimumRootGap
+                ) {
+
+                    const shift =
+                        child.x >= 0
+                            ? minimumRootGap
+                            : -minimumRootGap;
+
+
+                    child.each(
+                        function (d) {
+
+                            d.x +=
+                                shift;
+
+                        }
+                    );
+                }
+            }
+        );
     }
-});
 
 
-   /* ---------------------------------------------
-   Keep the root node anchored
-   --------------------------------------------- */
-   
-   const rootX = root.x;
-   
-   root.each(function(d) {
-       d.x = d.x - rootX;
-   });
-
-
-    /* =================================================
+    /* =====================================================
        LINKS
-    ================================================= */
+    ===================================================== */
 
     const linkGroup =
         container
             .append("g")
-            .attr("class", "links");
+            .attr(
+                "class",
+                "links"
+            );
 
 
     linkGroup
         .selectAll("path")
-        .data(root.links())
+        .data(
+            root.links()
+        )
         .join("path")
 
         .attr(
@@ -436,9 +582,15 @@ root.children?.forEach(function(child) {
             "stroke",
             d => {
 
-                if (d.target.depth === 1) {
-                    return branchColor(d.target);
+                if (
+                    d.target.depth === 1
+                ) {
+
+                    return branchColor(
+                        d.target
+                    );
                 }
+
 
                 return "#b8b8b8";
             }
@@ -448,13 +600,21 @@ root.children?.forEach(function(child) {
             "stroke-width",
             d => {
 
-                if (d.target.depth === 1) {
+                if (
+                    d.target.depth === 1
+                ) {
+
                     return 4;
                 }
 
-                if (d.target.depth === 2) {
+
+                if (
+                    d.target.depth === 2
+                ) {
+
                     return 2.5;
                 }
+
 
                 return 1.5;
             }
@@ -468,25 +628,43 @@ root.children?.forEach(function(child) {
         .attr(
             "d",
             d3.linkHorizontal()
-                .x(d => d.y + xOffset)
-                .y(d => d.x + yOffset)
+
+                .x(
+                    d =>
+                        d.y +
+                        xOffset
+                )
+
+                .y(
+                    d =>
+                        d.x +
+                        yOffset
+                )
         );
 
 
-    /* =================================================
+    /* =====================================================
        NODES
-    ================================================= */
+    ===================================================== */
 
     const nodeGroup =
         container
             .append("g")
-            .attr("class", "nodes");
+            .attr(
+                "class",
+                "nodes"
+            );
 
 
     const nodes =
         nodeGroup
+
             .selectAll("g")
-            .data(root.descendants())
+
+            .data(
+                root.descendants()
+            )
+
             .join("g")
 
             .attr(
@@ -504,24 +682,33 @@ root.children?.forEach(function(child) {
             );
 
 
-    /* =================================================
+    /* =====================================================
        NODE CIRCLE
-    ================================================= */
+    ===================================================== */
 
     nodes
+
         .append("circle")
 
         .attr(
             "r",
             d => {
 
-                if (d.depth === 0) {
+                if (
+                    d.depth === 0
+                ) {
+
                     return 11;
                 }
 
-                if (d.depth === 1) {
+
+                if (
+                    d.depth === 1
+                ) {
+
                     return 8;
                 }
+
 
                 return 5;
             }
@@ -531,13 +718,23 @@ root.children?.forEach(function(child) {
             "fill",
             d => {
 
-                if (d.depth === 0) {
+                if (
+                    d.depth === 0
+                ) {
+
                     return "#20242a";
                 }
 
-                if (d.depth === 1) {
-                    return branchColor(d);
+
+                if (
+                    d.depth === 1
+                ) {
+
+                    return branchColor(
+                        d
+                    );
                 }
+
 
                 return "#777";
             }
@@ -554,9 +751,9 @@ root.children?.forEach(function(child) {
         );
 
 
-    /* =================================================
+    /* =====================================================
        EXPAND / COLLAPSE CONTROL
-    ================================================= */
+    ===================================================== */
 
     const expandable =
         nodes.filter(
@@ -566,9 +763,9 @@ root.children?.forEach(function(child) {
         );
 
 
-    /* ---------------------------------------------
+    /* -----------------------------------------------------
        Control circle
-    --------------------------------------------- */
+    ----------------------------------------------------- */
 
     expandable
 
@@ -601,7 +798,8 @@ root.children?.forEach(function(child) {
 
         .attr(
             "stroke",
-            d => branchColor(d)
+            d =>
+                branchColor(d)
         )
 
         .attr(
@@ -610,9 +808,9 @@ root.children?.forEach(function(child) {
         );
 
 
-    /* ---------------------------------------------
+    /* -----------------------------------------------------
        Plus / minus symbol
-    --------------------------------------------- */
+    ----------------------------------------------------- */
 
     expandable
 
@@ -655,7 +853,8 @@ root.children?.forEach(function(child) {
 
         .attr(
             "fill",
-            d => branchColor(d)
+            d =>
+                branchColor(d)
         )
 
         .text(
@@ -666,9 +865,9 @@ root.children?.forEach(function(child) {
         );
 
 
-    /* =================================================
+    /* =====================================================
        TEXT
-    ================================================= */
+    ===================================================== */
 
     nodes
 
@@ -678,15 +877,22 @@ root.children?.forEach(function(child) {
             "class",
             d => {
 
-                if (d.depth === 0) {
+                if (
+                    d.depth === 0
+                ) {
+
                     return "node-title";
                 }
 
+
                 if (
-                    d.data.type === "detail"
+                    d.data.type ===
+                    "detail"
                 ) {
+
                     return "node-detail";
                 }
+
 
                 return "node-title";
             }
@@ -704,6 +910,7 @@ root.children?.forEach(function(child) {
                     return 24;
                 }
 
+
                 return 17;
             }
         )
@@ -717,17 +924,29 @@ root.children?.forEach(function(child) {
             "font-size",
             d => {
 
-                if (d.depth === 0) {
+                if (
+                    d.depth === 0
+                ) {
+
                     return "24px";
                 }
 
-                if (d.depth === 1) {
+
+                if (
+                    d.depth === 1
+                ) {
+
                     return "17px";
                 }
 
-                if (d.depth === 2) {
+
+                if (
+                    d.depth === 2
+                ) {
+
                     return "14px";
                 }
+
 
                 return "12px";
             }
@@ -739,9 +958,9 @@ root.children?.forEach(function(child) {
         );
 
 
-    /* =================================================
+    /* =====================================================
        ROOT IMAGE
-    ================================================= */
+    ===================================================== */
 
     if (currentImage) {
 
@@ -788,40 +1007,54 @@ root.children?.forEach(function(child) {
     }
 
 
-    /* =================================================
+    /* =====================================================
        CLICK TO EXPAND / COLLAPSE
-    ================================================= */
+    ===================================================== */
 
     expandable.on(
         "click",
-        function(event, d) {
+        function (
+            event,
+            d
+        ) {
 
             event.stopPropagation();
 
 
-            /* Toggle the actual data node */
+            /*
+               Toggle the actual data node.
+            */
 
             d.data.collapsed =
                 !d.data.collapsed;
 
 
-            /* Re-render without changing zoom */
+            /*
+               Re-render while preserving
+               the current camera position.
+            */
 
-            renderMindMap(tree, false);
+            renderMindMap(
+                tree,
+                false
+            );
         }
     );
 
 
-    /* =================================================
+    /* =====================================================
        FIT
-    ================================================= */
+    ===================================================== */
 
-   if (fitAfterRender) {
-    setTimeout(
-        fitMap,
-        50
-    );
-}
+    if (
+        fitAfterRender
+    ) {
+
+        setTimeout(
+            fitMap,
+            50
+        );
+    }
 }
 
 
@@ -842,7 +1075,10 @@ function fitMap() {
         );
 
 
-    if (!container.node()) {
+    if (
+        !container.node()
+    ) {
+
         return;
     }
 
@@ -856,6 +1092,7 @@ function fitMap() {
     const width =
         svg.node().clientWidth;
 
+
     const height =
         svg.node().clientHeight;
 
@@ -864,10 +1101,16 @@ function fitMap() {
         Math.min(
 
             width /
-            (bounds.width + 180),
+            (
+                bounds.width +
+                180
+            ),
 
             height /
-            (bounds.height + 180),
+            (
+                bounds.height +
+                180
+            ),
 
             1
 
@@ -876,6 +1119,7 @@ function fitMap() {
 
     const x =
         width / 2 -
+
         scale *
         (
             bounds.x +
@@ -885,6 +1129,7 @@ function fitMap() {
 
     const y =
         height / 2 -
+
         scale *
         (
             bounds.y +
@@ -898,22 +1143,37 @@ function fitMap() {
 
         .call(
             zoomBehaviour.transform,
+
             d3.zoomIdentity
-                .translate(x, y)
-                .scale(scale)
+
+                .translate(
+                    x,
+                    y
+                )
+
+                .scale(
+                    scale
+                )
         );
 }
 
 
 /* =========================================================
-   ZOOM BUTTONS
+   ZOOM IN
 ========================================================= */
 
 document
-    .getElementById("zoomInButton")
+    .getElementById(
+        "zoomInButton"
+    )
     .addEventListener(
         "click",
         () => {
+
+            if (!zoomBehaviour) {
+                return;
+            }
+
 
             svg.transition()
                 .call(
@@ -924,11 +1184,22 @@ document
     );
 
 
+/* =========================================================
+   ZOOM OUT
+========================================================= */
+
 document
-    .getElementById("zoomOutButton")
+    .getElementById(
+        "zoomOutButton"
+    )
     .addEventListener(
         "click",
         () => {
+
+            if (!zoomBehaviour) {
+                return;
+            }
+
 
             svg.transition()
                 .call(
@@ -939,8 +1210,14 @@ document
     );
 
 
+/* =========================================================
+   FIT BUTTON
+========================================================= */
+
 document
-    .getElementById("fitButton")
+    .getElementById(
+        "fitButton"
+    )
     .addEventListener(
         "click",
         fitMap
@@ -970,7 +1247,9 @@ generateButton.addEventListener(
 
 
         const tree =
-            parseMarkdown(markdown);
+            parseMarkdown(
+                markdown
+            );
 
 
         if (!tree) {
@@ -993,6 +1272,14 @@ generateButton.addEventListener(
         );
 
 
-        renderMindMap(tree, true);
+        /*
+           A completely new map should
+           automatically fit to the screen.
+        */
+
+        renderMindMap(
+            tree,
+            true
+        );
     }
 );
