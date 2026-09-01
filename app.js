@@ -941,6 +941,6 @@ generateButton.addEventListener(
         );
 
 
-        renderMindMap(tree true);
+        renderMindMap(tree, true);
     }
 );
