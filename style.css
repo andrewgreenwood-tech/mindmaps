@@ -460,3 +460,54 @@ textarea:focus {
 #mindMap text {
     dominant-baseline: middle;
 }
+/* =========================================================
+   POLISHED MIND MAP — STEP 2
+========================================================= */
+
+#mindMap {
+    background: #faf9f6;
+}
+
+.mind-node text {
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    paint-order: stroke;
+    stroke: transparent;
+}
+
+.mind-node .node-title {
+    font-weight: 650;
+    fill: #20242a;
+}
+
+.mind-node .node-detail {
+    font-weight: 400;
+    fill: #60656b;
+}
+
+.mind-node .expand-button {
+    transition:
+        transform 0.15s ease,
+        filter 0.15s ease;
+}
+
+.mind-node:hover .expand-button {
+    filter:
+        drop-shadow(
+            0 2px 4px rgba(0, 0, 0, 0.18)
+        );
+}
+
+.mind-node .expand-symbol {
+    font-family:
+        Arial,
+        sans-serif;
+
+    font-weight: 700;
+}
