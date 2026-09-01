@@ -1,6 +1,6 @@
 /* =========================================================
    STEPS MIND MAP
-   Clean Stable Map Engine
+   Complete Stable Map Engine
 ========================================================= */
 
 
@@ -41,7 +41,7 @@ let zoomBehaviour = null;
 
 
 /* =========================================================
-   IMAGE
+   IMAGE INPUT
 ========================================================= */
 
 if (imageInput) {
@@ -111,6 +111,7 @@ function parseMarkdown(markdown) {
         const line =
             rawLine.replace(/\t/g, "    ");
 
+
         if (!line.trim()) {
             continue;
         }
@@ -146,6 +147,7 @@ function parseMarkdown(markdown) {
                 children: [],
 
                 collapsed: false
+
             };
 
 
@@ -219,6 +221,7 @@ function parseMarkdown(markdown) {
                 children: [],
 
                 collapsed: false
+
             };
 
 
@@ -281,6 +284,7 @@ function branchColor(node) {
             branch.parent.children.indexOf(
                 branch
             );
+
 
         return colors[
             index % colors.length
@@ -349,11 +353,13 @@ function wrapText(selection, width) {
                     .split(/\s+/)
                     .reverse();
 
+
             let word;
 
             let line = [];
 
             const lines = [];
+
 
             const lineHeight =
                 d.depth === 0
@@ -377,6 +383,7 @@ function wrapText(selection, width) {
 
                 line.push(word);
 
+
                 const test =
                     line.join(" ");
 
@@ -390,9 +397,11 @@ function wrapText(selection, width) {
 
                     line.pop();
 
+
                     lines.push(
                         line.join(" ")
                     );
+
 
                     line = [word];
                 }
@@ -446,7 +455,7 @@ function wrapText(selection, width) {
 
 
 /* =========================================================
-   CREATE ZOOM
+   ZOOM
 ========================================================= */
 
 function setupZoom() {
@@ -488,27 +497,30 @@ function setupZoom() {
 function createLayout() {
 
     /*
+       D3 TREE
+
        X = vertical position
        Y = horizontal position
 
-       The root remains fixed at 0,0.
-
-       We deliberately give the map more horizontal
-       breathing room so that:
+       We deliberately increase the horizontal
+       separation so the map reads as:
 
        ROOT
-          ↓
-       PRIMARY
-             ↓
-          SECONDARY
-                   ↓
-                  DETAIL
+          |
+          |------ PRIMARY
+                         |
+                         |------ SECONDARY
+                                          |
+                                          |------ DETAIL
+
+       rather than compressing all levels together.
     */
+
 
     const layout =
         d3.tree()
             .nodeSize([
-                115,
+                105,
                 360
             ]);
 
@@ -519,7 +531,7 @@ function createLayout() {
 
 
     /* -------------------------------------------------
-       KEEP ROOT VERTICALLY FIXED
+       KEEP ROOT AT VERTICAL ZERO
     ------------------------------------------------- */
 
     const rootX =
@@ -530,13 +542,12 @@ function createLayout() {
         function (d) {
 
             d.x -= rootX;
-
         }
     );
 
 
     /* -------------------------------------------------
-       SPACE PRIMARY BRANCHES
+       KEEP PRIMARY BRANCHES SPACED
     ------------------------------------------------- */
 
     if (
@@ -549,7 +560,7 @@ function createLayout() {
 
 
         const minimumGap =
-            125;
+            115;
 
 
         for (
@@ -560,7 +571,6 @@ function createLayout() {
 
             const previous =
                 children[i - 1];
-
 
             const current =
                 children[i];
@@ -585,21 +595,16 @@ function createLayout() {
 
                         d.x +=
                             adjustment;
-
                     }
                 );
-
             }
-
         }
-
     }
-
 }
 
 
 /* =========================================================
-   RENDER
+   RENDER MIND MAP
 ========================================================= */
 
 function renderMindMap(
@@ -613,13 +618,13 @@ function renderMindMap(
 
 
     /*
-       Save the current camera.
+       Save current camera.
 
-       This is what prevents the map
-       from jumping when expanding/collapsing.
+       This prevents the map from jumping
+       when a branch is expanded or collapsed.
     */
 
-    let previousTransform =
+    const previousTransform =
         d3.zoomTransform(
             svg.node()
         );
@@ -721,6 +726,7 @@ function renderMindMap(
                     );
                 }
 
+
                 return "#c4c7ca";
             }
         )
@@ -732,14 +738,18 @@ function renderMindMap(
                 if (
                     d.target.depth === 1
                 ) {
+
                     return 4;
                 }
+
 
                 if (
                     d.target.depth === 2
                 ) {
+
                     return 2.5;
                 }
+
 
                 return 1.5;
             }
@@ -817,6 +827,7 @@ function renderMindMap(
                         return "mind-node root-node";
                     }
 
+
                     if (
                         d.depth === 1
                     ) {
@@ -824,12 +835,14 @@ function renderMindMap(
                         return "mind-node major-node";
                     }
 
+
                     if (
                         d.depth === 2
                     ) {
 
                         return "mind-node secondary-node";
                     }
+
 
                     return "mind-node detail-node";
                 }
@@ -850,7 +863,7 @@ function renderMindMap(
 
 
     /* -------------------------------------------------
-       CARD
+       NODE CARD
     ------------------------------------------------- */
 
     nodes
@@ -917,12 +930,14 @@ function renderMindMap(
                     return "#20242a";
                 }
 
+
                 if (
                     d.depth === 1
                 ) {
 
                     return branchColor(d);
                 }
+
 
                 return "#d3d6da";
             }
@@ -939,12 +954,14 @@ function renderMindMap(
                     return 3;
                 }
 
+
                 if (
                     d.depth === 1
                 ) {
 
                     return 2.5;
                 }
+
 
                 return 1.5;
             }
@@ -1022,6 +1039,7 @@ function renderMindMap(
                         return "node-title root-title";
                     }
 
+
                     if (
                         d.data.type ===
                         "detail"
@@ -1029,6 +1047,7 @@ function renderMindMap(
 
                         return "node-detail";
                     }
+
 
                     return "node-title";
                 }
@@ -1051,20 +1070,26 @@ function renderMindMap(
                     if (
                         d.depth === 0
                     ) {
+
                         return "24px";
                     }
+
 
                     if (
                         d.depth === 1
                     ) {
+
                         return "17px";
                     }
+
 
                     if (
                         d.depth === 2
                     ) {
+
                         return "14px";
                     }
+
 
                     return "12px";
                 }
@@ -1089,6 +1114,7 @@ function renderMindMap(
                         return "#20242a";
                     }
 
+
                     if (
                         d.data.type ===
                         "detail"
@@ -1096,6 +1122,7 @@ function renderMindMap(
 
                         return "#62676d";
                     }
+
 
                     return "#252a30";
                 }
@@ -1338,7 +1365,7 @@ function renderMindMap(
 
 
     /* -------------------------------------------------
-       CLICK
+       EXPAND / COLLAPSE
     ------------------------------------------------- */
 
     expandable.on(
@@ -1352,8 +1379,7 @@ function renderMindMap(
 
 
             /*
-               Toggle the DATA node,
-               not the temporary D3 node.
+               Change the actual DATA node.
             */
 
             d.data.collapsed =
@@ -1363,8 +1389,7 @@ function renderMindMap(
             /*
                Re-render without Fit Map.
 
-               Because the root coordinate is always
-               0,0 the camera stays anchored.
+               The camera is restored afterwards.
             */
 
             renderMindMap(
@@ -1438,6 +1463,7 @@ function fitMap() {
     const width =
         svg.node().clientWidth;
 
+
     const height =
         svg.node().clientHeight;
 
@@ -1457,19 +1483,9 @@ function fitMap() {
     }
 
 
-    /*
-       The root is ALWAYS at:
-
-           x = 0
-           y = 0
-
-       Therefore we can deliberately put
-       that point at a fixed screen location.
-    */
-
-
     const horizontalPadding =
         80;
+
 
     const verticalPadding =
         60;
@@ -1503,7 +1519,7 @@ function fitMap() {
 
 
     /*
-       Keep the map readable.
+       Keep map readable.
     */
 
     scale =
@@ -1517,24 +1533,16 @@ function fitMap() {
 
 
     /*
-       Root should sit around 25% from
-       the left edge.
-
-       This is intentionally NOT centred.
+       Keep root toward the left side
+       instead of centering it.
     */
 
     const targetRootX =
         width * 0.27;
 
+
     const targetRootY =
         height * 0.50;
-
-
-    const translateX =
-        targetRootX;
-
-    const translateY =
-        targetRootY;
 
 
     svg.transition()
@@ -1543,8 +1551,8 @@ function fitMap() {
             zoomBehaviour.transform,
             d3.zoomIdentity
                 .translate(
-                    translateX,
-                    translateY
+                    targetRootX,
+                    targetRootY
                 )
                 .scale(
                     scale
@@ -1572,6 +1580,7 @@ if (zoomInButton) {
             if (!zoomBehaviour) {
                 return;
             }
+
 
             svg.transition()
                 .call(
@@ -1602,6 +1611,7 @@ if (zoomOutButton) {
             if (!zoomBehaviour) {
                 return;
             }
+
 
             svg.transition()
                 .call(
@@ -1636,67 +1646,76 @@ if (fitButton) {
 
 
 /* =========================================================
-   GENERATE
+   GENERATE MAP
 ========================================================= */
 
-generateButton.addEventListener(
-    "click",
-    function () {
+if (generateButton) {
 
-        const markdown =
-            markdownInput.value.trim();
+    generateButton.addEventListener(
+        "click",
+        function () {
+
+            const markdown =
+                markdownInput.value.trim();
 
 
-        if (!markdown) {
+            if (!markdown) {
 
-            alert(
-                "Please enter a Markdown mind map first."
+                alert(
+                    "Please enter a Markdown mind map first."
+                );
+
+                return;
+            }
+
+
+            const tree =
+                parseMarkdown(
+                    markdown
+                );
+
+
+            if (!tree) {
+
+                alert(
+                    "The Markdown could not be interpreted."
+                );
+
+                return;
+            }
+
+
+            /*
+               Store the actual DATA tree.
+
+               Collapse / expand changes this object,
+               so the state survives re-rendering.
+            */
+
+            mapData =
+                tree;
+
+
+            if (inputPanel) {
+
+                inputPanel.classList.add(
+                    "hidden"
+                );
+            }
+
+
+            if (mapPanel) {
+
+                mapPanel.classList.remove(
+                    "hidden"
+                );
+            }
+
+
+            renderMindMap(
+                mapData,
+                true
             );
-
-            return;
         }
-
-
-        const tree =
-            parseMarkdown(
-                markdown
-            );
-
-
-        if (!tree) {
-
-            alert(
-                "The Markdown could not be interpreted."
-            );
-
-            return;
-        }
-
-
-        /*
-           Store the actual DATA tree.
-
-           Expansion/collapse changes this object,
-           so the state survives re-rendering.
-        */
-
-        mapData =
-            tree;
-
-
-        inputPanel.classList.add(
-            "hidden"
-        );
-
-
-        mapPanel.classList.remove(
-            "hidden"
-        );
-
-
-        renderMindMap(
-            mapData,
-            true
-        );
-    }
-);
+    );
+}
