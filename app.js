@@ -968,121 +968,196 @@ return 46;
 }
 
 /* =========================================================
-TEXT WRAPPING
+   TEXT WRAPPING
 ========================================================= */
 
-function wrapText(selection, width) {
+function wrapText(
+    selection,
+    width
+) {
 
-selection.each(
-    function (d) {
+    selection.each(
+        function (d) {
 
-        const text =
-            d3.select(this);
-
-        const words =
-            d.data.title
-                .split(/\s+/)
-                .reverse();
+            const text =
+                d3.select(this);
 
 
-        let word;
+            /* -------------------------------------------------
+               CHECK FOR ICON OR IMAGE
+            ------------------------------------------------- */
 
-        let line = [];
+            const key =
+                getNodeAppearanceKey(d);
 
-        const lines = [];
+            const appearance =
+                nodeAppearance[key];
 
-
-        const lineHeight =
-            d.depth === 0
-                ? 25
-                : d.depth === 1
-                    ? 19
-                    : 16;
-
-
-        const characterWidth =
-            d.depth === 0
-                ? 12
-                : d.depth === 1
-                    ? 8.5
-                    : 7;
+            const hasVisual =
+                appearance &&
+                (
+                    appearance.icon ||
+                    appearance.image
+                );
 
 
-        while (
-            (word = words.pop())
-        ) {
+            /*
+               When a node has an icon or picture,
+               move the text slightly to the right
+               so it does not overlap the visual.
+            */
 
-            line.push(word);
+            const textOffset =
+                hasVisual
+                    ? 28
+                    : 0;
 
 
-            const test =
-                line.join(" ");
+            /*
+               Give the text slightly less room when
+               an icon/image is present.
+            */
+
+            const availableWidth =
+                hasVisual
+                    ? width - 45
+                    : width;
 
 
-            if (
-                test.length *
-                characterWidth >
-                width &&
-                line.length > 1
+            /* -------------------------------------------------
+               WORDS
+            ------------------------------------------------- */
+
+            const words =
+                d.data.title
+                    .split(/\s+/)
+                    .reverse();
+
+
+            let word;
+
+            let line = [];
+
+            const lines = [];
+
+
+            /* -------------------------------------------------
+               LINE HEIGHT
+            ------------------------------------------------- */
+
+            const lineHeight =
+                d.depth === 0
+                    ? 25
+                    : d.depth === 1
+                        ? 19
+                        : 16;
+
+
+            /* -------------------------------------------------
+               APPROXIMATE CHARACTER WIDTH
+            ------------------------------------------------- */
+
+            const characterWidth =
+                d.depth === 0
+                    ? 12
+                    : d.depth === 1
+                        ? 8.5
+                        : 7;
+
+
+            /* -------------------------------------------------
+               BUILD LINES
+            ------------------------------------------------- */
+
+            while (
+                (word = words.pop())
             ) {
 
-                line.pop();
+                line.push(word);
 
+
+                const test =
+                    line.join(" ");
+
+
+                if (
+                    test.length *
+                    characterWidth >
+                    availableWidth &&
+                    line.length > 1
+                ) {
+
+                    line.pop();
+
+
+                    lines.push(
+                        line.join(" ")
+                    );
+
+
+                    line = [word];
+                }
+            }
+
+
+            if (line.length) {
 
                 lines.push(
                     line.join(" ")
                 );
-
-
-                line = [word];
             }
-        }
 
 
-        if (line.length) {
+            /* -------------------------------------------------
+               VERTICAL CENTRE
+            ------------------------------------------------- */
 
-            lines.push(
-                line.join(" ")
+            const totalHeight =
+                (
+                    lines.length - 1
+                ) *
+                lineHeight;
+
+
+            /* -------------------------------------------------
+               CLEAR EXISTING TEXT
+            ------------------------------------------------- */
+
+            text.text(null);
+
+
+            /* -------------------------------------------------
+               CREATE TEXT LINES
+            ------------------------------------------------- */
+
+            lines.forEach(
+                function (
+                    lineText,
+                    index
+                ) {
+
+                    text
+                        .append("tspan")
+
+                        .attr(
+                            "x",
+                            textOffset
+                        )
+
+                        .attr(
+                            "dy",
+                            index === 0
+                                ? `${-totalHeight / 2}px`
+                                : `${lineHeight}px`
+                        )
+
+                        .text(
+                            lineText
+                        );
+                }
             );
         }
-
-
-        const totalHeight =
-            (
-                lines.length - 1
-            ) *
-            lineHeight;
-
-
-        text.text(null);
-
-
-        lines.forEach(
-            function (
-                lineText,
-                index
-            ) {
-
-                text
-                    .append("tspan")
-                    .attr(
-                        "x",
-                        0
-                    )
-                    .attr(
-                        "dy",
-                        index === 0
-                            ? `${-totalHeight / 2}px`
-                            : `${lineHeight}px`
-                    )
-                    .text(
-                        lineText
-                    );
-            }
-        );
-    }
-);
-
+    );
 }
 
 /* =========================================================
